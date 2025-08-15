@@ -44,8 +44,11 @@ dependencies {
 	testImplementation("org.testcontainers:mysql")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-	//swagger
-	//implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.4")
+	implementation 'io.springfox:springfox-swagger2:2.9.2'
+	implementation 'io.springfox:springfox-swagger-ui:2.9.2'
+
+	implementation group: 'io.springfox', name: 'springfox-boot-starter', version: '3.0.0'
+	implementation group: 'io.springfox', name: 'springfox-swagger-ui', version: '3.0.0'
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.slf4j:slf4j-api:2.0.7'
