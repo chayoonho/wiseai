@@ -28,7 +28,6 @@ public class PaymentWebhookController {
             paymentService.handleWebhook(provider, webhookData);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-
             // 지원하지 않는 결제사, 또는 잘못된 데이터일 경우 400 Bad Request 반환
             return ResponseEntity.badRequest().build();
         }
