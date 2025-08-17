@@ -4,25 +4,26 @@ import com.example.wiseai_dev.payment.domain.model.Payment;
 import com.example.wiseai_dev.payment.domain.model.PaymentProvider;
 import com.example.wiseai_dev.payment.domain.model.PaymentStatus;
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
-import com.example.wiseai_dev.reservation.infrastructure.persistence.entity.ReservationEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", uniqueConstraints = @UniqueConstraint(columnNames = "transactionId"))
 @Getter
 @Setter
 @NoArgsConstructor
 public class PaymentEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    // 예약 엔티티 참조 (관계 매핑)
+    @ManyToOne(fetch = FetchType.LAZY)   // or @OneToOne
     @JoinColumn(name = "reservation_id", nullable = false)
-    private ReservationEntity reservation;
+    private com.example.wiseai_dev.reservation.infrastructure.persistence.entity.ReservationEntity reservation;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "provider_id", nullable = false)
@@ -33,20 +34,21 @@ public class PaymentEntity {
 
     private double amount;
 
+    @Column(nullable = false, unique = true)
     private String transactionId;
+
+    @Column(columnDefinition = "TEXT")
+    private String rawResponse; // 웹훅 원본 데이터 저장용
 
     @Version
     private Long version;
 
-
+    // 도메인 모델 변환
     public Payment toPayment() {
-        // ReservationEntity를 Reservation 도메인 모델로 변환
-//        Reservation reservationDomain = this.reservation.toDomainModel();
         PaymentProvider paymentProviderDomain = this.paymentProvider.toDomainModel();
 
         return Payment.builder()
                 .id(this.id)
-//                .reservation(paymentProviderDomain)
                 .paymentProvider(paymentProviderDomain)
                 .status(this.status)
                 .amount(this.amount)
@@ -54,6 +56,4 @@ public class PaymentEntity {
                 .version(this.version)
                 .build();
     }
-
-
 }
