@@ -6,7 +6,7 @@ WISE AI 개발 프로젝트 **wiseai-dev**는 회의실 예약 및 결제 시스
 ---
 
 ## 📌 프로젝트 개요
-본 프로젝트는 **MSA (Microservices Architecture)** 를 지향하며, 각 서비스는 **Spring Boot**와 **Kotlin**으로 구성되어 있습니다.
+본 프로젝트는 **Spring Boot**와 **Java**로 구성되어 있습니다.
 
 ---
 
@@ -87,3 +87,13 @@ bash
 ./gradlew test
 IDE에서 실행
 IntelliJ IDEA 등 IDE에서 테스트 클래스 또는 메서드 옆 ▶ 버튼 클릭
+
+📝 브랜치 및 제출 안내
+
+본 프로젝트는 금요일까지 최종 제출이 예정되어 있습니다.
+
+금요일 제출 기준으로 수정된 내용은 dev 브랜치에 반영되어 있습니다.
+
+금요일 이후 추가적으로 진행된 개발 및 수정 사항은 master 브랜치와 dev2 브랜치에 포함되어 있으니 참고 바랍니다.
+
+💡 요약: 제출용 안정 버전 → dev / 추가 개발 사항 → master & dev2
