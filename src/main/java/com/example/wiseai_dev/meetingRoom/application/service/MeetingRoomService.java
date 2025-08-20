@@ -1,5 +1,6 @@
 package com.example.wiseai_dev.meetingRoom.application.service;
 
+import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomRequest;
 import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomResponse;
 import com.example.wiseai_dev.meetingRoom.domain.model.MeetingRoom;
 import com.example.wiseai_dev.meetingRoom.domain.repository.MeetingRoomRepository;
@@ -18,7 +19,7 @@ public class MeetingRoomService {
         this.meetingRoomRepository = meetingRoomRepository;
     }
 
-    public MeetingRoomResponse createMeetingRoom(MeetingRoom meetingRoomRequest) {
+    public MeetingRoomResponse createMeetingRoom(MeetingRoomRequest meetingRoomRequest) {
         MeetingRoom meetingRoom = new MeetingRoom(
                 null,
                 meetingRoomRequest.getName(),

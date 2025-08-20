@@ -2,11 +2,13 @@ package com.example.wiseai_dev.meetingRoom.application.api.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class MeetingRoomRequest {
     @NotBlank(message = "회의실 이름은 필수입니다.")
     private String name;
