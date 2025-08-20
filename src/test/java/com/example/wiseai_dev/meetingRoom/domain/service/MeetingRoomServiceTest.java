@@ -1,11 +1,10 @@
 package com.example.wiseai_dev.meetingRoom.domain.service;
 
+import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomRequest;
 import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomResponse;
 import com.example.wiseai_dev.meetingRoom.application.service.MeetingRoomService;
 import com.example.wiseai_dev.meetingRoom.domain.model.MeetingRoom;
 import com.example.wiseai_dev.meetingRoom.domain.repository.MeetingRoomRepository;
-import com.example.wiseai_dev.meetingRoom.infrastructrue.presistence.entity.MeetingRoomEntity;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,7 +32,7 @@ public class MeetingRoomServiceTest {
     @Test
     void 회의실을_생성할_수_있음() {
         // given
-        MeetingRoom newRoom = new MeetingRoom(null, "회의실A", 10, 50000.0);
+        MeetingRoomRequest newRoom = new MeetingRoomRequest("회의실A", 10, 50000.0);
         // Mocking 시 반환될 MeetingRoom 객체를 생성
         MeetingRoom savedRoom = new MeetingRoom(1L, "회의실A", 10, 50000.0);
 

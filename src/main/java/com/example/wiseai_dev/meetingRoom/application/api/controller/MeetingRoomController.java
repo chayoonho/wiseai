@@ -4,8 +4,6 @@ import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomRequest
 import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomResponse;
 
 import com.example.wiseai_dev.meetingRoom.application.service.MeetingRoomService;
-import com.example.wiseai_dev.meetingRoom.domain.model.MeetingRoom;
-import com.example.wiseai_dev.meetingRoom.infrastructrue.presistence.entity.MeetingRoomEntity;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
