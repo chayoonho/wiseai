@@ -1,11 +1,12 @@
-# JDK 기반 빌드 이미지
-FROM eclipse-temurin:17-jdk
-
-# 작업 디렉토리 생성
+# 1단계: 빌드 스테이지
+FROM gradle:7.6-jdk17 AS build
 WORKDIR /app
+COPY . .
+RUN gradle bootJar
 
-# 빌드된 JAR 복사 (예: build/libs/wiseai-dev-0.0.1-SNAPSHOT.jar)
-COPY build/libs/*.jar app.jar
-
-# 실행
+# 2단계: 최종 실행 스테이지
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /app/build/libs/*.jar app.jar
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
