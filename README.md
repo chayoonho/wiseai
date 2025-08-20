@@ -77,7 +77,7 @@ http://localhost:8080 에서 동작
 
 📖 API 문서 (Swagger UI)
 프로젝트 실행 후 아래 URL에서 API 확인 가능:
-👉 http://localhost:8080/swagger-ui
+👉http://localhost:8080/swagger-ui/index.html#/
 
 ✅ 테스트 실행 방법
 Gradle로 실행
