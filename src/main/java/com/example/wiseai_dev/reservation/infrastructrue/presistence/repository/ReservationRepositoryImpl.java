@@ -23,7 +23,13 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     @Override
     public Reservation save(Reservation reservation) {
         ReservationEntity entity = toEntity(reservation);
+
+        entity.setReservationNo("temp"); // NotNull 제약조건 회피용 임시값
         ReservationEntity savedEntity = jpaRepository.save(entity);
+
+        String newReservationNo = "RES-" + savedEntity.getId();
+        savedEntity.setReservationNo(newReservationNo);
+
         return toDomainModel(savedEntity);
     }
 
@@ -69,13 +75,14 @@ public class ReservationRepositoryImpl implements ReservationRepository {
         }
         return new ReservationEntity(
                 domainModel.getId(),
+                domainModel.getReservationNo(),
                 domainModel.getMeetingRoomId(),
                 domainModel.getStartTime(),
                 domainModel.getEndTime(),
                 domainModel.getBookerName(),
                 domainModel.getStatus(),
                 domainModel.getTotalAmount(),
-                domainModel.getVersion() // version 필드 추가
+                domainModel.getVersion()
         );
     }
 }

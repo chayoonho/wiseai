@@ -2,6 +2,7 @@ package com.example.wiseai_dev.reservation.domain.model;
 
 import com.example.wiseai_dev.reservation.application.api.dto.ReservationUpdateRequest;
 import jakarta.persistence.Version;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 public class Reservation {
     private Long id;
+    private String reservationNo;
     private Long meetingRoomId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -22,8 +24,9 @@ public class Reservation {
     private long version;
 
     // 예약 생성 시 사용되는 생성자
-    public Reservation(Long id, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount) {
+    public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount) {
         this.id = id;
+        this.reservationNo = reservationNo;
         this.status = ReservationStatus.PENDING_PAYMENT;
         this.meetingRoomId = meetingRoomId;
         this.startTime = startTime;
@@ -33,8 +36,9 @@ public class Reservation {
         this.version = 0;
     }
 
-    public Reservation(Long id, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
+    public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
         this.id = id;
+        this.reservationNo = reservationNo;
         this.meetingRoomId = meetingRoomId;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -44,7 +48,7 @@ public class Reservation {
         this.version = version;
     }
 
-    public Reservation(Object o, long l, String tester, LocalDateTime now, LocalDateTime localDateTime, double v, ReservationStatus reservationStatus, int i) {
+    public Reservation(Object o, @NotNull(message = "회의실 ID는 필수입니다.") Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, @NotNull(message = "예약자 이름은 필수입니다.") String bookerName, ReservationStatus reservationStatus, double totalAmount) {
     }
 
     public void cancel() {
@@ -73,4 +77,5 @@ public class Reservation {
         }
         this.status = ReservationStatus.CONFIRMED;
     }
+
 }

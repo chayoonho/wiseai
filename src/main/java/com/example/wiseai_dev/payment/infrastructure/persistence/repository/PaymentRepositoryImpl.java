@@ -82,6 +82,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
             ReservationEntity reservationEntity = entity.getReservation();
             reservationDomain = new Reservation(
                                 reservationEntity.getId(),
+                                reservationEntity.getReservationNo(),
                                 reservationEntity.getMeetingRoomId(),
                                 reservationEntity.getStartTime(),
                                 reservationEntity.getEndTime(),
