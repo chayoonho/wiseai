@@ -17,6 +17,10 @@ public class ReservationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String reservationNo; // 우리가 사용할 접두사가 붙은 예약번호
+
     private Long meetingRoomId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -29,4 +33,5 @@ public class ReservationEntity {
 
     @Version
     private long version;
+
 }
