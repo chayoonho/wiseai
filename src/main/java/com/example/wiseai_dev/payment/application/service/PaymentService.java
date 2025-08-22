@@ -71,7 +71,7 @@ public class PaymentService {
 
         // 3. 결제 게이트웨이 호출 (Payment 객체 생성)
         PaymentProvider paymentProvider = paymentProviderRepository.findByName(paymentProviderName)
-                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제사입니다.==>" + paymentProviderName));
+                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제사입니다.==> " + paymentProviderName));
         PaymentGateway gateway = paymentGateways.get(paymentProviderName);
         Payment newPayment = new Payment(
                 null, reservation, paymentProvider, PaymentStatus.PENDING,

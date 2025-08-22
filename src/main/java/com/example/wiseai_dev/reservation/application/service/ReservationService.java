@@ -41,7 +41,6 @@ public class ReservationService {
 
         // 4. DTO -> 도메인 모델 변환 및 초기 상태 설정
         Reservation newReservation = new Reservation(
-                null,
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime(),
@@ -50,12 +49,23 @@ public class ReservationService {
                 totalAmount
         );
 
-        // 5. 도메인 모델 저장
+        // 저장 전에 임시 reservationNo 세팅
+        newReservation.setReservationNo("TEMP");
+
+        // 5. 도메인 모델 저장 (id 할당됨)
         Reservation savedReservation = reservationRepository.save(newReservation);
 
-        // 6. 저장된 도메인 모델 -> 응답 DTO 변환 및 반환
-        return toDto(savedReservation);
+        // 6. 채번 로직 (id 기반 예약번호 생성)
+        String reservationNo = "RES-" + savedReservation.getId();
+        savedReservation.setReservationNo(reservationNo);
+
+        // 7. 다시 저장하여 예약번호 반영
+        Reservation updatedReservation = reservationRepository.save(savedReservation);
+
+        // 8. 저장된 도메인 모델 -> 응답 DTO 변환 및 반환
+        return toDto(updatedReservation);
     }
+
 
     // 단일 예약 조회
     @Transactional(readOnly = true)

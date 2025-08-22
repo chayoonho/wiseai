@@ -19,7 +19,7 @@ public class ReservationEntity {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String reservationNo; // 우리가 사용할 접두사가 붙은 예약번호
+    private String reservationNo;
 
     private Long meetingRoomId;
     private LocalDateTime startTime;
