@@ -1,15 +1,16 @@
 package com.example.wiseai_dev.reservation.application.api.controller;
 
+
+import com.example.wiseai_dev.global.ApiResponse;
 import com.example.wiseai_dev.reservation.application.api.dto.ReservationRequest;
 import com.example.wiseai_dev.reservation.application.api.dto.ReservationResponse;
 import com.example.wiseai_dev.reservation.application.api.dto.ReservationUpdateRequest;
 import com.example.wiseai_dev.reservation.application.service.ReservationService;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -19,39 +20,39 @@ public class ReservationController {
 
     private final ReservationService reservationService;
 
-    // 예약 생성 API
+    @Operation(summary = "예약 생성")
     @PostMapping
-    public ResponseEntity<ReservationResponse> createReservation(@Valid @RequestBody ReservationRequest request) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> create(@RequestBody ReservationRequest request) {
         ReservationResponse response = reservationService.createReservation(request);
-        URI location = URI.create("/reservations/" + response.getId());
-        return ResponseEntity.created(location).body(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    // 특정 예약 조회 API
+    @Operation(summary = "예약 단건 조회")
     @GetMapping("/{id}")
-    public ResponseEntity<ReservationResponse> getReservationById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> getById(@PathVariable Long id) {
         ReservationResponse response = reservationService.getReservationById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    // 전체 예약 목록 조회 API
+    @Operation(summary = "예약 전체 조회")
     @GetMapping
-    public ResponseEntity<List<ReservationResponse>> getAllReservations() {
-        List<ReservationResponse> response = reservationService.getReservations();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getAll() {
+        List<ReservationResponse> responses = reservationService.getReservations();
+        return ResponseEntity.ok(ApiResponse.ok(responses));
     }
 
-    // 예약 수정 API
+    @Operation(summary = "예약 수정")
     @PutMapping("/{id}")
-    public ResponseEntity<ReservationResponse> updateReservation(@PathVariable Long id, @Valid @RequestBody ReservationUpdateRequest request) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> update(@PathVariable Long id,
+                                                                   @RequestBody ReservationUpdateRequest request) {
         ReservationResponse response = reservationService.updateReservation(id, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    // 예약 취소 API
-    @PatchMapping("/{id}/cancel")
-    public ResponseEntity<ReservationResponse> cancelReservation(@PathVariable Long id) {
+    @Operation(summary = "예약 취소")
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<ReservationResponse>> cancel(@PathVariable Long id) {
         ReservationResponse response = reservationService.updateReservationStatusToCancelled(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

@@ -15,11 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
@@ -28,22 +26,19 @@ public class ReservationService {
     /**
      * 예약 생성
      */
+    @Transactional
     public ReservationResponse createReservation(ReservationRequest request) {
-        // 1. 시간 검증
         validateReservationTime(request.getStartTime(), request.getEndTime());
-
-        // 2. 중복 예약 확인
         checkTimeAvailability(request.getMeetingRoomId(), request.getStartTime(), request.getEndTime());
 
-        // 3. 결제 금액 계산
         double totalAmount = calculateTotalAmount(
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime()
         );
 
-        // 4. 예약 생성 및 저장 (한 번만 저장)
         Reservation newReservation = Reservation.builder()
+                .reservationNo("TEMP") // 임시
                 .meetingRoomId(request.getMeetingRoomId())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
@@ -52,10 +47,14 @@ public class ReservationService {
                 .totalAmount(totalAmount)
                 .build();
 
+        // 저장
         Reservation savedReservation = reservationRepository.save(newReservation);
-        savedReservation.setReservationNo("RES-" + savedReservation.getId());
 
-        return ReservationResponse.fromEntity(savedReservation);
+        // 예약번호 채번 후 반영
+        savedReservation.setReservationNo("RES-" + savedReservation.getId());
+        Reservation updatedReservation = reservationRepository.save(savedReservation);
+
+        return ReservationResponse.fromEntity(updatedReservation);
     }
 
     /**
@@ -75,17 +74,17 @@ public class ReservationService {
     public List<ReservationResponse> getReservations() {
         return reservationRepository.findAll().stream()
                 .map(ReservationResponse::fromEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
      * 예약 변경
      */
+    @Transactional
     public ReservationResponse updateReservation(Long id, ReservationUpdateRequest request) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("수정하려는 예약 정보를 찾을 수 없습니다."));
 
-        // 시간 검증 및 중복 체크
         validateReservationTime(request.getStartTime(), request.getEndTime());
         checkTimeAvailability(reservation.getMeetingRoomId(), request.getStartTime(), request.getEndTime(), id);
 
@@ -95,7 +94,6 @@ public class ReservationService {
                 request.getEndTime()
         );
 
-        // 엔티티 메서드를 통해 업데이트
         reservation.update(
                 request.getStartTime(),
                 request.getEndTime(),
@@ -103,18 +101,22 @@ public class ReservationService {
                 newTotalAmount
         );
 
-        return ReservationResponse.fromEntity(reservation);
+        Reservation updatedReservation = reservationRepository.save(reservation);
+        return ReservationResponse.fromEntity(updatedReservation);
     }
 
     /**
      * 예약 취소 (상태 변경)
      */
-    public ReservationResponse updateReservationStatusToCancelled(Long id) {
+    @Transactional
+    public ReservationResponse cancelReservation(Long id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("취소하려는 예약 정보를 찾을 수 없습니다."));
 
         reservation.setStatus(ReservationStatus.CANCELLED);
-        return ReservationResponse.fromEntity(reservation);
+        Reservation updatedReservation = reservationRepository.save(reservation);
+
+        return ReservationResponse.fromEntity(updatedReservation);
     }
 
     // ====== 내부 비즈니스 로직 ======
@@ -141,7 +143,7 @@ public class ReservationService {
             if (currentReservationId != null
                     && existingReservations.size() == 1
                     && existingReservations.get(0).getId().equals(currentReservationId)) {
-                return; // 자기 자신이면 통과
+                return; // 자기 자신일 때는 통과
             }
             throw new IllegalStateException("해당 시간대에 이미 예약이 존재합니다.");
         }
