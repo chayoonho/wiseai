@@ -1,6 +1,5 @@
 package com.example.wiseai_dev.payment.application.api.controller;
 
-
 import com.example.wiseai_dev.global.ApiResponse;
 import com.example.wiseai_dev.payment.application.api.dto.PaymentRequest;
 import com.example.wiseai_dev.payment.application.api.dto.PaymentResponse;

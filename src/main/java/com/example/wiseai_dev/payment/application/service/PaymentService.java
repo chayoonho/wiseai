@@ -12,6 +12,7 @@ import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +31,6 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final Map<String, PaymentGateway> paymentGateways;
 
-    /**
-     * 결제 게이트웨이들을 빈으로 받아서 맵핑
-     */
     public PaymentService(ReservationRepository reservationRepository,
                           PaymentProviderRepository paymentProviderRepository,
                           PaymentRepository paymentRepository,
@@ -48,10 +46,11 @@ public class PaymentService {
     }
 
     /**
-     * 예약 결제 처리
+     * 예약 결제 처리 (비관적 락 적용)
      */
+    @Transactional
     public PaymentResponse processReservationPayment(Long reservationId, String paymentProviderName) {
-        // 1. 예약 조회
+        // 1. 예약 조회 (락 필요 없음, 단순 조회)
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
 
@@ -59,12 +58,12 @@ public class PaymentService {
             throw new IllegalStateException("이미 결제 처리된 예약입니다.");
         }
 
-        // 2. 중복 결제 방지
-        if (paymentRepository.findByReservationId(reservationId).isPresent()) {
+        // 2. 중복 결제 방지 (비관적 락 적용)
+        if (paymentRepository.findByReservationIdForUpdate(reservationId).isPresent()) {
             throw new IllegalStateException("이미 결제 정보가 존재하는 예약입니다.");
         }
 
-        // 3. 결제사 조회
+        // 3. 결제사 확인
         PaymentProvider paymentProvider = paymentProviderRepository.findByName(paymentProviderName)
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제사입니다: " + paymentProviderName));
 
@@ -75,53 +74,32 @@ public class PaymentService {
 
         // 4. 결제 요청 생성
         Payment newPayment = new Payment(
-                null,
-                reservation,
-                paymentProvider,
-                PaymentStatus.PENDING,
-                reservation.getTotalAmount(),
-                null,
-                0L
+                null, reservation, paymentProvider, PaymentStatus.PENDING,
+                reservation.getTotalAmount(), null, 0L
         );
 
-        // 5. PG사 호출
-        PaymentResult paymentResult = gateway.processPayment(newPayment);
+        try {
+            // 5. PG사 호출
+            PaymentResult paymentResult = gateway.processPayment(newPayment);
 
-        // 6. Payment 저장
-        newPayment.setTransactionId(paymentResult.getTransactionId());
-        newPayment.setStatus(paymentResult.getStatus());
-        Payment savedPayment = paymentRepository.save(newPayment);
+            // 6. Payment 저장
+            newPayment.setTransactionId(paymentResult.getTransactionId());
+            newPayment.setStatus(paymentResult.getStatus());
+            Payment savedPayment = paymentRepository.save(newPayment);
 
-        // 7. Reservation 상태 업데이트
-        if (paymentResult.getStatus() == PaymentStatus.SUCCESS) {
-            reservation.setStatus(ReservationStatus.CONFIRMED);
-        } else {
-            reservation.setStatus(ReservationStatus.CANCELLED);
+            // 7. Reservation 상태 업데이트
+            if (paymentResult.getStatus() == PaymentStatus.SUCCESS) {
+                reservation.setStatus(ReservationStatus.CONFIRMED);
+            } else {
+                reservation.setStatus(ReservationStatus.CANCELLED);
+            }
+            reservationRepository.save(reservation);
+
+            // 8. DTO 응답 반환
+            return PaymentResponse.from(savedPayment, reservation);
+
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new IllegalStateException("동시성 충돌 발생. 결제를 재시도해주세요.");
         }
-        reservationRepository.save(reservation);
-
-        // 8. DTO 응답 반환
-        return PaymentResponse.from(savedPayment, reservation);
-    }
-
-    /**
-     * 결제 상태 조회
-     */
-    @Transactional(readOnly = true)
-    public PaymentStatus getPaymentStatus(Long reservationId) {
-        return paymentRepository.findByReservationId(reservationId)
-                .map(Payment::getStatus)
-                .orElseThrow(() -> new IllegalArgumentException("해당 예약의 결제 내역이 없습니다."));
-    }
-
-    /**
-     * 결제 웹훅 처리
-     */
-    public void handleWebhook(String provider, Map<String, Object> webhookData) {
-        PaymentGateway paymentGateway = paymentGateways.get(provider);
-        if (paymentGateway == null) {
-            throw new IllegalArgumentException("지원하지 않는 결제사 웹훅입니다: " + provider);
-        }
-        paymentGateway.processWebhook(webhookData);
     }
 }

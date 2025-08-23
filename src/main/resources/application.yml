@@ -79,6 +79,7 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
     disable-swagger-default-url: true
+    resolve-schema-properties: true
     enabled: true
     urls:
       - name: wiseai_dev

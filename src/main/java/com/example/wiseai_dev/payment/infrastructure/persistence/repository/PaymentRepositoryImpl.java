@@ -7,7 +7,7 @@ import com.example.wiseai_dev.payment.infrastructure.persistence.entity.PaymentE
 import com.example.wiseai_dev.payment.infrastructure.persistence.entity.PaymentProviderEntity;
 import com.example.wiseai_dev.payment.infrastructure.persistence.jpa.PaymentJpaRepository;
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
-import com.example.wiseai_dev.reservation.infrastructure.persistence.entity.ReservationEntity;
+import com.example.wiseai_dev.reservation.infrastructrue.presistence.entity.ReservationEntity;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -39,6 +39,12 @@ public class PaymentRepositoryImpl implements PaymentRepository {
         Optional<PaymentEntity> entity = jpaRepository.findByReservationId(reservationId);
         // Payment 도메인 모델로 변환하여 반환
         return entity.map(this::fromEntity);
+    }
+
+    @Override
+    public Optional<Payment> findByReservationIdForUpdate(Long reservationId) {
+        return jpaRepository.findByReservationIdForUpdate(reservationId)
+                .map(PaymentEntity::toPayment);
     }
 
     // --- 변환 헬퍼 메서드 ---

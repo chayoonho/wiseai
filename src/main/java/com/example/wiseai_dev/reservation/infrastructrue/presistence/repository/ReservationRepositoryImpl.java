@@ -2,8 +2,9 @@ package com.example.wiseai_dev.reservation.infrastructrue.presistence.repository
 
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
+import com.example.wiseai_dev.reservation.infrastructrue.presistence.entity.ReservationEntity;
 import com.example.wiseai_dev.reservation.infrastructrue.presistence.jpa.ReservationJpaRepository;
-import com.example.wiseai_dev.reservation.infrastructure.persistence.entity.ReservationEntity;
+
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;

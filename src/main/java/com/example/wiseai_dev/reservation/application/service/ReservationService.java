@@ -8,6 +8,7 @@ import com.example.wiseai_dev.reservation.application.api.dto.ReservationUpdateR
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
@@ -26,7 +29,6 @@ public class ReservationService {
     /**
      * 예약 생성
      */
-    @Transactional
     public ReservationResponse createReservation(ReservationRequest request) {
         validateReservationTime(request.getStartTime(), request.getEndTime());
         checkTimeAvailability(request.getMeetingRoomId(), request.getStartTime(), request.getEndTime());
@@ -38,7 +40,7 @@ public class ReservationService {
         );
 
         Reservation newReservation = Reservation.builder()
-                .reservationNo("TEMP") // 임시
+                .reservationNo("TEMP")
                 .meetingRoomId(request.getMeetingRoomId())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
@@ -47,19 +49,12 @@ public class ReservationService {
                 .totalAmount(totalAmount)
                 .build();
 
-        // 저장
-        Reservation savedReservation = reservationRepository.save(newReservation);
+        Reservation saved = reservationRepository.save(newReservation);
+        saved.setReservationNo("RES-" + saved.getId());
 
-        // 예약번호 채번 후 반영
-        savedReservation.setReservationNo("RES-" + savedReservation.getId());
-        Reservation updatedReservation = reservationRepository.save(savedReservation);
-
-        return ReservationResponse.fromEntity(updatedReservation);
+        return ReservationResponse.fromEntity(reservationRepository.save(saved));
     }
 
-    /**
-     * 단일 예약 조회
-     */
     @Transactional(readOnly = true)
     public ReservationResponse getReservationById(Long id) {
         Reservation reservation = reservationRepository.findById(id)
@@ -67,60 +62,62 @@ public class ReservationService {
         return ReservationResponse.fromEntity(reservation);
     }
 
-    /**
-     * 전체 예약 조회
-     */
     @Transactional(readOnly = true)
     public List<ReservationResponse> getReservations() {
         return reservationRepository.findAll().stream()
                 .map(ReservationResponse::fromEntity)
-                .toList();
+                .collect(Collectors.toList());
     }
 
     /**
-     * 예약 변경
+     * 예약 변경 - 낙관적 락 적용
      */
-    @Transactional
     public ReservationResponse updateReservation(Long id, ReservationUpdateRequest request) {
-        Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("수정하려는 예약 정보를 찾을 수 없습니다."));
+        try {
+            Reservation reservation = reservationRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("예약 정보를 찾을 수 없습니다."));
 
-        validateReservationTime(request.getStartTime(), request.getEndTime());
-        checkTimeAvailability(reservation.getMeetingRoomId(), request.getStartTime(), request.getEndTime(), id);
+            validateReservationTime(request.getStartTime(), request.getEndTime());
+            checkTimeAvailability(reservation.getMeetingRoomId(), request.getStartTime(), request.getEndTime(), id);
 
-        double newTotalAmount = calculateTotalAmount(
-                reservation.getMeetingRoomId(),
-                request.getStartTime(),
-                request.getEndTime()
-        );
+            double newTotalAmount = calculateTotalAmount(
+                    reservation.getMeetingRoomId(),
+                    request.getStartTime(),
+                    request.getEndTime()
+            );
 
-        reservation.update(
-                request.getStartTime(),
-                request.getEndTime(),
-                request.getBookerName(),
-                newTotalAmount
-        );
+            reservation.update(
+                    request.getStartTime(),
+                    request.getEndTime(),
+                    request.getBookerName(),
+                    newTotalAmount
+            );
 
-        Reservation updatedReservation = reservationRepository.save(reservation);
-        return ReservationResponse.fromEntity(updatedReservation);
+            return ReservationResponse.fromEntity(reservationRepository.save(reservation));
+
+        } catch (OptimisticLockException e) {
+            throw new IllegalStateException("다른 사용자가 이미 예약을 변경했습니다. 다시 시도해주세요.");
+        }
     }
 
     /**
-     * 예약 취소 (상태 변경)
+     * 예약 취소 (낙관적 락)
      */
-    @Transactional
-    public ReservationResponse cancelReservation(Long id) {
-        Reservation reservation = reservationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("취소하려는 예약 정보를 찾을 수 없습니다."));
+    public ReservationResponse updateReservationStatusToCancelled(Long id) {
+        try {
+            Reservation reservation = reservationRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("취소하려는 예약 정보를 찾을 수 없습니다."));
 
-        reservation.setStatus(ReservationStatus.CANCELLED);
-        Reservation updatedReservation = reservationRepository.save(reservation);
+            reservation.setStatus(ReservationStatus.CANCELLED);
 
-        return ReservationResponse.fromEntity(updatedReservation);
+            return ReservationResponse.fromEntity(reservationRepository.save(reservation));
+
+        } catch (OptimisticLockException e) {
+            throw new IllegalStateException("동시에 다른 사용자가 예약을 수정했습니다. 다시 시도해주세요.");
+        }
     }
 
     // ====== 내부 비즈니스 로직 ======
-
     private void validateReservationTime(LocalDateTime startTime, LocalDateTime endTime) {
         if (startTime.isAfter(endTime) || startTime.isEqual(endTime)) {
             throw new IllegalArgumentException("시작 시간은 종료 시간보다 빨라야 합니다.");
@@ -136,14 +133,12 @@ public class ReservationService {
 
     private void checkTimeAvailability(Long meetingRoomId, LocalDateTime startTime,
                                        LocalDateTime endTime, Long currentReservationId) {
-        List<Reservation> existingReservations =
-                reservationRepository.findByMeetingRoomIdAndTimeRange(meetingRoomId, startTime, endTime);
-
-        if (!existingReservations.isEmpty()) {
-            if (currentReservationId != null
-                    && existingReservations.size() == 1
-                    && existingReservations.get(0).getId().equals(currentReservationId)) {
-                return; // 자기 자신일 때는 통과
+        List<Reservation> existing = reservationRepository.findByMeetingRoomIdAndTimeRange(meetingRoomId, startTime, endTime);
+        if (!existing.isEmpty()) {
+            if (currentReservationId != null &&
+                    existing.size() == 1 &&
+                    existing.get(0).getId().equals(currentReservationId)) {
+                return;
             }
             throw new IllegalStateException("해당 시간대에 이미 예약이 존재합니다.");
         }
@@ -153,7 +148,7 @@ public class ReservationService {
         MeetingRoom meetingRoom = meetingRoomRepository.findById(meetingRoomId)
                 .orElseThrow(() -> new IllegalArgumentException("회의실을 찾을 수 없습니다."));
         long minutes = ChronoUnit.MINUTES.between(startTime, endTime);
-        long hours = (minutes + 59) / 60; // 올림 처리
+        long hours = (minutes + 59) / 60; // 올림
         return hours * meetingRoom.getHourlyRate();
     }
 }
