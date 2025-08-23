@@ -35,7 +35,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     @Override
-    public Optional<Object> findByReservationId(Long reservationId) {
+    public Optional<Payment> findByReservationId(Long reservationId) {
         Optional<PaymentEntity> entity = jpaRepository.findByReservationId(reservationId);
         // Payment 도메인 모델로 변환하여 반환
         return entity.map(this::fromEntity);

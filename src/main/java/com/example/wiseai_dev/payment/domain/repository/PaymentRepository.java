@@ -9,5 +9,5 @@ public interface PaymentRepository {
 
     Optional<Payment> findById(Long id);
 
-    Optional<Object> findByReservationId(Long reservationId);
+    Optional<Payment> findByReservationId(Long reservationId);
 }
