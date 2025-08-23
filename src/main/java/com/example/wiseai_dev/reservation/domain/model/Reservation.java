@@ -23,33 +23,48 @@ public class Reservation {
     @Version
     private long version;
 
-    // 예약 생성 시 사용되는 생성자
-    public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount) {
+    public Reservation(Long id,
+                       String  reservationNo,
+                       @NotNull(message = "회의실 ID는 필수입니다.") Long meetingRoomId,
+                       LocalDateTime startTime,
+                       LocalDateTime endTime,
+                       @NotNull(message = "예약자 이름은 필수입니다.") String bookerName,
+                       ReservationStatus reservationStatus,
+                       double totalAmount)  {
         this.id = id;
         this.reservationNo = reservationNo;
-        this.status = ReservationStatus.PENDING_PAYMENT;
         this.meetingRoomId = meetingRoomId;
         this.startTime = startTime;
         this.endTime = endTime;
         this.bookerName = bookerName;
         this.totalAmount = totalAmount;
+        this.status = ReservationStatus.PENDING_PAYMENT; // 초기 상태는 항상 '결제 대기'
         this.version = 0;
     }
 
-    public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
-        this.id = id;
-        this.reservationNo = reservationNo;
+    public Reservation(
+            Long meetingRoomId,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            String bookerName,
+            ReservationStatus status,
+            double totalAmount
+    ) {
         this.meetingRoomId = meetingRoomId;
         this.startTime = startTime;
         this.endTime = endTime;
         this.bookerName = bookerName;
-        this.totalAmount = totalAmount;
         this.status = status;
-        this.version = version;
+        this.totalAmount = totalAmount;
     }
 
-    public Reservation(Object o, @NotNull(message = "회의실 ID는 필수입니다.") Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, @NotNull(message = "예약자 이름은 필수입니다.") String bookerName, ReservationStatus reservationStatus, double totalAmount) {
+
+    public Reservation(String reservationNo, @NotNull(message = "회의실 ID는 필수입니다.") Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, @NotNull(message = "예약자 이름은 필수입니다.") String bookerName, ReservationStatus reservationStatus, double totalAmount) {
     }
+
+    public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
+    }
+
 
     public void cancel() {
         if (this.status == ReservationStatus.CONFIRMED) {
@@ -77,5 +92,4 @@ public class Reservation {
         }
         this.status = ReservationStatus.CONFIRMED;
     }
-
 }

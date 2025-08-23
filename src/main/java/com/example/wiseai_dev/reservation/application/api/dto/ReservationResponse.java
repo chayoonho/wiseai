@@ -27,6 +27,8 @@ public class ReservationResponse {
     @Schema(description = "예약 ID", example = "1001")
     private Long id;
 
+    private String reservationNo;
+
     @Schema(description = "회의실 ID", example = "1")
     private Long meetingRoomId;
 

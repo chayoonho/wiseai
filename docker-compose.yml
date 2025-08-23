@@ -6,16 +6,19 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/wiseai_dev
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/wiseai_dev
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
 
   db:
     image: mysql:8.0
+    container_name: mysql_db
     environment:
-      MYSQL_DATABASE: wiseai_dev
+      # MySQL 루트 비밀번호
       MYSQL_ROOT_PASSWORD: root
+      # Spring Boot 애플리케이션에서 사용하는 DB 이름과 일치하도록 wiseai_dev로 수정
+      MYSQL_DATABASE: wiseai_dev
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
