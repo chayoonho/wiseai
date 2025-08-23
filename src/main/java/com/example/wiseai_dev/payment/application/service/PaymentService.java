@@ -1,5 +1,6 @@
 package com.example.wiseai_dev.payment.application.service;
 
+import com.example.wiseai_dev.payment.application.api.dto.PaymentResponse;
 import com.example.wiseai_dev.payment.domain.gateway.PaymentGateway;
 import com.example.wiseai_dev.payment.domain.model.Payment;
 import com.example.wiseai_dev.payment.domain.model.PaymentProvider;
@@ -7,15 +8,12 @@ import com.example.wiseai_dev.payment.domain.model.PaymentResult;
 import com.example.wiseai_dev.payment.domain.model.PaymentStatus;
 import com.example.wiseai_dev.payment.domain.repository.PaymentProviderRepository;
 import com.example.wiseai_dev.payment.domain.repository.PaymentRepository;
-import com.example.wiseai_dev.payment.infrastructure.persistence.entity.PaymentEntity;
-import com.example.wiseai_dev.payment.infrastructure.persistence.jpa.PaymentJpaRepository;
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -24,6 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class PaymentService {
 
@@ -31,100 +30,86 @@ public class PaymentService {
     private final PaymentProviderRepository paymentProviderRepository;
     private final PaymentRepository paymentRepository;
     private final Map<String, PaymentGateway> paymentGateways;
-    private final PaymentJpaRepository paymentJpaRepository;
 
-    public PaymentService(ReservationRepository reservationRepository,
-                          PaymentProviderRepository paymentProviderRepository,
-                          PaymentRepository paymentRepository,
-                          List<PaymentGateway> gateways, PaymentJpaRepository paymentJpaRepository) {
-        this.reservationRepository = reservationRepository;
-        this.paymentProviderRepository = paymentProviderRepository;
-        this.paymentRepository = paymentRepository;
-        this.paymentGateways = gateways.stream()
-                .collect(Collectors.toMap(
-                        gateway -> gateway.getClass().getSimpleName().replace("PaymentGateway", ""),
-                        Function.identity()
-                ));
-        this.paymentJpaRepository = paymentJpaRepository;
-    }
 
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public PaymentResult processReservationPayment(Long reservationId, String paymentProviderName) {
-        // 1. 비관적 락으로 예약 조회 (데드락 방지)
+    /**
+     * 예약 결제 처리
+     */
+    @Transactional
+    public PaymentResponse processReservationPayment(Long reservationId, String paymentProviderName) {
+        // 1. 예약 조회
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
 
         if (reservation.getStatus() != ReservationStatus.PENDING_PAYMENT) {
-            throw new IllegalStateException("결제가 가능한 예약 상태가 아닙니다.");
+            throw new IllegalStateException("이미 결제 처리된 예약입니다.");
         }
 
-        // 2. 결제 정보 중복 체크
+        // 2. 중복 결제 방지
         if (paymentRepository.findByReservationId(reservationId).isPresent()) {
             throw new IllegalStateException("이미 결제 정보가 존재하는 예약입니다.");
         }
 
-        // 3. 결제 게이트웨이 호출 (Payment 객체 생성)
+        // 3. 결제사 확인
         PaymentProvider paymentProvider = paymentProviderRepository.findByName(paymentProviderName)
-                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제사입니다.==> " + paymentProviderName));
+                .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제사입니다: " + paymentProviderName));
+
         PaymentGateway gateway = paymentGateways.get(paymentProviderName);
+        if (gateway == null) {
+            throw new IllegalArgumentException("등록되지 않은 결제 게이트웨이: " + paymentProviderName);
+        }
+
+        // 4. 결제 요청 생성
         Payment newPayment = new Payment(
                 null, reservation, paymentProvider, PaymentStatus.PENDING,
                 reservation.getTotalAmount(), null, 0L
         );
-        PaymentResult paymentResult = gateway.processPayment(newPayment);
 
-        // 4. 결제 상태 업데이트 및 저장 (새로운 트랜잭션에서 실행)
         try {
-            Payment savedPayment = savePayment(newPayment, paymentResult);
+            // 5. PG사 호출
+            PaymentResult paymentResult = gateway.processPayment(newPayment);
 
-            // 5. 예약 상태 업데이트 (현재 트랜잭션에서 진행)
-            if (savedPayment.getStatus() == PaymentStatus.SUCCESS) {
+            // 6. Payment 저장
+            newPayment.setTransactionId(paymentResult.getTransactionId());
+            newPayment.setStatus(paymentResult.getStatus());
+            Payment savedPayment = paymentRepository.save(newPayment);
+
+            // 7. Reservation 상태 업데이트
+            if (paymentResult.getStatus() == PaymentStatus.SUCCESS) {
                 reservation.setStatus(ReservationStatus.CONFIRMED);
             } else {
                 reservation.setStatus(ReservationStatus.CANCELLED);
             }
             reservationRepository.save(reservation);
+            reservationRepository.flush(); // DB에 즉시 반영
 
-            // 6. 결과 반환
-            return PaymentResult.builder()
-                    .paymentId(savedPayment.getId())
-                    .reservationId(reservation.getId())
-                    .amount(savedPayment.getAmount())
-                    .status(savedPayment.getStatus())
-                    .transactionId(savedPayment.getTransactionId())
-                    .providerName(paymentProviderName)
-                    .rawResponse(paymentResult.getRawResponse())
-                    .build();
+            // 8. DTO 응답 반환
+            return PaymentResponse.from(savedPayment, reservation);
+
         } catch (ObjectOptimisticLockingFailureException e) {
-            throw new IllegalStateException("동시성 충돌 발생. 결제 정보를 다시 확인해주세요.");
+            throw new IllegalStateException("동시성 충돌 발생. 결제를 재시도해주세요.");
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Payment savePayment(Payment newPayment, PaymentResult paymentResult) {
-        newPayment.setTransactionId(paymentResult.getTransactionId());
-        newPayment.setStatus(paymentResult.getStatus());
-        return paymentRepository.save(newPayment);
-    }
-
+    /**
+     * 결제 상태 조회
+     */
+    @Transactional(readOnly = true)
     public PaymentStatus getPaymentStatus(Long reservationId) {
-        PaymentEntity paymentEntity = paymentJpaRepository.findByReservationId(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 예약에 대한 결제 정보가 없습니다."));
-
-        Payment payment = paymentEntity.toPayment();
-
+        Payment payment = (Payment) paymentRepository.findByReservationId(reservationId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 예약의 결제 내역이 없습니다."));
         return payment.getStatus();
     }
 
+    /**
+     * 결제 웹훅 처리
+     */
+    @Transactional
     public void handleWebhook(String provider, Map<String, Object> webhookData) {
         PaymentGateway paymentGateway = paymentGateways.get(provider);
         if (paymentGateway == null) {
-            throw new IllegalArgumentException("Unsupported payment provider: " + provider);
+            throw new IllegalArgumentException("지원하지 않는 결제사 웹훅입니다: " + provider);
         }
-
-        // 결제 게이트웨이를 통해 웹훅 데이터를 처리하고 Payment 객체를 업데이트
         paymentGateway.processWebhook(webhookData);
-
     }
-
 }

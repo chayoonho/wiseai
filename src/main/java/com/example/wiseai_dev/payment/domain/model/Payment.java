@@ -1,6 +1,7 @@
 package com.example.wiseai_dev.payment.domain.model;
 
 
+import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomRequest;
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import lombok.*;
 import jakarta.persistence.Version;
@@ -19,4 +20,5 @@ public class Payment {
     private String transactionId;
     @Version
     private long version;
+
 }

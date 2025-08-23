@@ -16,8 +16,9 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-  properties:
-    hibernate.format_sql: true
+    properties:
+      hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
@@ -40,11 +41,36 @@ spring:
     show-sql: true
     properties:
       hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG\
-  org.hibernate.type.descriptor.sql: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+---
+# 'test' ??? ??
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:mysql://db:3306/wiseai_dev
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
 
 ---
 springdoc:
