@@ -55,6 +55,11 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void flush() {
+        jpaRepository.flush();
+    }
+
     // --- 변환 헬퍼 메서드 ---
     private Reservation toDomainModel(ReservationEntity entity) {
         if (entity == null) {
