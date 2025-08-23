@@ -18,9 +18,8 @@ public class ReservationEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String reservationNo;
-
     private Long meetingRoomId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

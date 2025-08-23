@@ -41,6 +41,7 @@ public class ReservationService {
 
         // 4. DTO -> 도메인 모델 변환 및 초기 상태 설정
         Reservation newReservation = new Reservation(
+                request.getReservationNo(),
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime(),

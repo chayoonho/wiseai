@@ -25,4 +25,6 @@ public class ReservationRequest {
     @Schema(description = "예약자 이름", example = "홍길동")
     @NotNull(message = "예약자 이름은 필수입니다.")
     private String bookerName;
+
+    private String reservationNo;
 }

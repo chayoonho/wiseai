@@ -23,7 +23,6 @@ public class CardPaymentGateway implements PaymentGateway {
         // A사 API 호출
         String rawResponse = "{\"status\":\"SUCCESS\", \"txnId\":\"CARD_12345\"}";
 
-
         return PaymentResult.builder()
                 .status(PaymentStatus.SUCCESS)
                 .transactionId("CARD_12345")

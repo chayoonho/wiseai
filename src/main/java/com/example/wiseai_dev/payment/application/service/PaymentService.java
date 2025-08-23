@@ -58,13 +58,7 @@ public class PaymentService {
             throw new IllegalStateException("결제가 가능한 예약 상태가 아닙니다.");
         }
 
-        //  결제 관련 로직은 제거하고, 예약 상태만 변경하여 버전 충돌을 유도 테스트용 ***
-//        reservation.confirmPayment();
-//        reservationRepository.save(reservation);
-//
-//        return null;
-
-        // 2. 결제 정보 중복 체크 (선택사항, 필요에 따라 유지)
+        // 2. 결제 정보 중복 체크
         if (paymentRepository.findByReservationId(reservationId).isPresent()) {
             throw new IllegalStateException("이미 결제 정보가 존재하는 예약입니다.");
         }
