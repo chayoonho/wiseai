@@ -17,6 +17,11 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	// 전역적으로 JUnit4 / Vintage 제거 (안전망)
+	all {
+		exclude group: 'junit', module: 'junit'
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
 }
 
 repositories {
@@ -24,27 +29,38 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	// Spring
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// DB driver (Boot BOM이 버전 관리하므로 버전 명시 X)
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	// DB
-	runtimeOnly("com.mysql:mysql-connector-j")
-	runtimeOnly 'com.h2database:h2'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 
-	// Test
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.springframework.boot:spring-boot-testcontainers")
-	testImplementation("org.testcontainers:junit-jupiter")
-	testImplementation("org.testcontainers:mysql")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	// Test (JUnit 5 / Testcontainers)
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+		exclude group: 'junit', module: 'junit'
+	}
+	testImplementation('org.springframework.boot:spring-boot-testcontainers') {
+		exclude group: 'junit', module: 'junit'
+	}
+	testImplementation('org.testcontainers:mysql') {
+		exclude group: 'junit', module: 'junit'
+	}
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher' // IDE 실행용 런처
 
+	// Swagger / OpenAPI
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	// Logging API (필요 시)
 	implementation 'org.slf4j:slf4j-api:2.0.7'
 }
 
