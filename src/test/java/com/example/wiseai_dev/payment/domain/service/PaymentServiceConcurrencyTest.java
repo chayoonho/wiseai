@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @SpringBootTest(classes = WiseaiDevApplication.class)
 @ActiveProfiles("test")
-class PaymentServiceConcurrencyTest {
+public class PaymentServiceConcurrencyTest {
 
     @Autowired
     private PaymentService paymentService;
