@@ -109,6 +109,7 @@ bash
 편집
 ./gradlew test
 또는 IDE에서 실행
+```
 
 📝 브랜치 전략
 dev → 제출용 안정 버전
