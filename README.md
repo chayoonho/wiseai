@@ -71,72 +71,28 @@ WISE AI 개발 프로젝트 **wiseai-dev**는 회의실 예약 및 결제 시스
 ## 🏗 아키텍처 설계
 
 ### 1. 레이어드 아키텍처 (DDD 기반)
-```mermaid
-flowchart TB
-    subgraph Presentation [Presentation Layer]
-        C1[Controller]
-    end
+- **Presentation 계층**: 클라이언트 요청 수신 및 응답 반환 (Controller)
+- **Application 계층**: 비즈니스 로직 조율 및 트랜잭션 관리 (Service)
+- **Domain 계층**: 순수 비즈니스 로직 (도메인 모델, 도메인 서비스, 리포지토리 인터페이스)
+- **Infrastructure 계층**: 영속성 및 외부 연동 (JPA 엔티티, JPA 리포지토리 구현체, 결제 Gateway)
 
-    subgraph Application [Application Layer]
-        S1[ReservationService]
-        S2[PaymentService]
-    end
+### 2. 결제 프로세스 흐름
+1. 사용자가 `POST /reservations/{id}/payment` API 호출  
+2. `PaymentService`에서 예약 상태 확인 (`PENDING_PAYMENT`)  
+3. PG사 연동(`PaymentGateway`)을 통해 결제 요청  
+4. 결제 성공 시 → `Payment` 저장, 예약 상태 `CONFIRMED`로 변경  
+5. 결제 실패 시 → 예약 상태 `CANCELLED`로 변경  
+6. 최종적으로 `PaymentResponse` 반환  
 
-    subgraph Domain [Domain Layer]
-        D1[Reservation]
-        D2[Payment]
-        D3[Repository Interfaces]
-    end
+---
 
-    subgraph Infrastructure [Infrastructure Layer]
-        JPA1[ReservationJpaRepository]
-        JPA2[PaymentJpaRepository]
-        Entity1[ReservationEntity]
-        Entity2[PaymentEntity]
-        Gateway[PaymentGateway 구현체]
-    end
+## 🛠 프로젝트 시작하기
 
-    C1 --> S1
-    C1 --> S2
-    S1 --> D1
-    S1 --> D3
-    S2 --> D2
-    S2 --> D3
-    D3 --> JPA1
-    D3 --> JPA2
-    JPA1 --> Entity1
-    JPA2 --> Entity2
-    S2 --> Gateway
-2. 결제 프로세스 시퀀스 다이어그램
-mermaid
-복사
-편집
-sequenceDiagram
-    participant U as User
-    participant C as PaymentController
-    participant S as PaymentService
-    participant R as ReservationRepository
-    participant P as PaymentRepository
-    participant G as PaymentGateway
+### 사전 준비
+- Docker 및 Docker Compose 설치 필요
 
-    U->>C: POST /reservations/{id}/payment
-    C->>S: processReservationPayment(id, provider)
-    S->>R: findById(id) (with lock)
-    R-->>S: Reservation (PENDING_PAYMENT)
-    S->>G: processPayment(Payment)
-    G-->>S: PaymentResult (SUCCESS)
-    S->>P: save(Payment)
-    S->>R: update Reservation → CONFIRMED
-    S-->>C: PaymentResponse
-    C-->>U: 결제 성공 응답
-🛠 프로젝트 시작하기
-사전 준비
-Docker 및 Docker Compose 설치 필요
-
-실행 방법
-bash
-복사
-편집
+### 실행 방법
+```bash
 # 프로젝트 루트 디렉토리 이동
 cd wiseai-dev
 
@@ -158,3 +114,14 @@ bash
 dev → 제출용 안정 버전
 
 master / dev2 → 추가 개발 및 확장 사항 포함
+
+💡 요약
+회의실 예약/결제 시스템
+
+동시성 제어 (낙관적/비관적 락)
+
+결제사 확장 가능한 구조
+
+ApiResponse<T> 통일
+
+Docker 기반 실행 환경
