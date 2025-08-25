@@ -39,20 +39,22 @@ public class ReservationService {
                 request.getEndTime()
         );
 
-        Reservation newReservation = Reservation.builder()
-                .reservationNo("TEMP")
-                .meetingRoomId(request.getMeetingRoomId())
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .bookerName(request.getBookerName())
-                .status(ReservationStatus.PENDING_PAYMENT)
-                .totalAmount(totalAmount)
-                .build();
+        Reservation newReservation = Reservation.create(
+                "TEMP",
+                request.getMeetingRoomId(),
+                request.getStartTime(),
+                request.getEndTime(),
+                request.getBookerName(),
+                totalAmount,
+                ReservationStatus.PENDING_PAYMENT
+        );
 
         Reservation saved = reservationRepository.save(newReservation);
-        saved.setReservationNo("RES-" + saved.getId());
 
-        return ReservationResponse.fromEntity(reservationRepository.save(saved));
+        saved.setReservationNo("RES-" + saved.getId());
+        reservationRepository.flush();
+
+        return ReservationResponse.fromEntity(saved);
     }
 
     @Transactional(readOnly = true)

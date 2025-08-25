@@ -17,8 +17,9 @@ spring:
       ddl-auto: update
     show-sql: true
     properties:
-      hibernate.format_sql: true
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
@@ -40,8 +41,9 @@ spring:
       ddl-auto: update
     show-sql: true
     properties:
-      hibernate.format_sql: true
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
@@ -49,7 +51,6 @@ logging:
     org.hibernate.type.descriptor.sql: TRACE
 
 ---
-# 'test' ??? ??
 spring:
   config:
     activate:
@@ -64,8 +65,9 @@ spring:
       ddl-auto: create-drop
     show-sql: true
     properties:
-      hibernate.format_sql: true
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
 logging:
   level:
@@ -74,21 +76,19 @@ logging:
 
 ---
 springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-    tags-sorter: alpha
-    operations-sorter: alpha
-    disable-swagger-default-url: true
-    resolve-schema-properties: true
-    enabled: true
-    urls:
-      - name: wiseai_dev
-        url: /v3/api-docs
   api-docs:
     path: /v3/api-docs
     enabled: true
     default-produces-media-type: application/json
+    # 필요시 특정 경로만 노출
     paths-to-match: /api/**, /webhooks/**
+  swagger-ui:
+    path: /swagger-ui/index.html   # 권장 (springdoc 기본 경로)
+    tags-sorter: alpha
+    operations-sorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+    try-it-out-enabled: true
 
 server:
   servlet:
