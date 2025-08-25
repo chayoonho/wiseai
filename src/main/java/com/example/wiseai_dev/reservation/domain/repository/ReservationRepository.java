@@ -13,4 +13,5 @@ public interface ReservationRepository {
     void deleteById(Long id);
     List<Reservation> findByMeetingRoomIdAndTimeRange(Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime);
     public void flush();
+    void deleteAll();
 }

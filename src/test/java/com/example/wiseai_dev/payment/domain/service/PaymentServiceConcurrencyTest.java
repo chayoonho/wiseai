@@ -39,30 +39,31 @@ class PaymentServiceConcurrencyTest {
     private final String paymentProviderName = "Card";
 
     @BeforeEach
-    @Transactional
-    void setup() {
+    void 테스트_데이터_세팅() {
+        // 이전 테스트 데이터 정리
+        paymentJpaRepository.deleteAll();
+        reservationRepository.deleteAll();
+
         // 예약 데이터 초기화
-        Reservation newReservation = Reservation.builder()
-                .reservationNo("RES-1")
-                .meetingRoomId(3L)
-                .bookerName("tester")
-                .startTime(LocalDateTime.now())
-                .endTime(LocalDateTime.now().plusHours(1))
-                .totalAmount(100.0)
-                .status(ReservationStatus.PENDING_PAYMENT)
-                .version(0L)
-                .build();
+        Reservation newReservation = new Reservation(
+                null,
+                "RES-1",
+                3L,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusHours(1),
+                "tester",
+                ReservationStatus.PENDING_PAYMENT,
+                100.0,
+                0L
+        );
 
         Reservation savedReservation = reservationRepository.save(newReservation);
         this.reservationId = savedReservation.getId();
-
-        // 이전 테스트 데이터 정리
-        paymentJpaRepository.deleteByReservationId(this.reservationId);
     }
 
     @Test
     @DisplayName("동일 예약 동시 결제 시 하나만 성공하고 나머지는 실패한다")
-    void processReservationPayment_concurrentAccess_shouldFailOnDuplicate() throws InterruptedException {
+    void 동일_예약_동시_결제_하나만_성공() throws InterruptedException {
         // Given
         int threadCount = 5;
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
@@ -78,7 +79,7 @@ class PaymentServiceConcurrencyTest {
                     startLatch.await(); // 모든 스레드가 동시에 시작
                     paymentService.processReservationPayment(reservationId, paymentProviderName);
                     successCount.incrementAndGet();
-                } catch (IllegalStateException e) {
+                } catch (IllegalStateException | org.springframework.orm.ObjectOptimisticLockingFailureException e) {
                     failureCount.incrementAndGet();
                 } catch (Exception e) {
                     System.err.println("예외 발생: " + e.getClass().getName() + " - " + e.getMessage());

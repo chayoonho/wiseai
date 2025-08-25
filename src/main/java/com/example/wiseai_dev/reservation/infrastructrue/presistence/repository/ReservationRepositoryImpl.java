@@ -61,6 +61,11 @@ public class ReservationRepositoryImpl implements ReservationRepository {
         jpaRepository.flush();
     }
 
+    @Override
+    public void deleteAll() {
+        jpaRepository.deleteAll();
+    }
+
     // --- 변환 헬퍼 메서드 ---
     private Reservation toDomainModel(ReservationEntity entity) {
         if (entity == null) {
