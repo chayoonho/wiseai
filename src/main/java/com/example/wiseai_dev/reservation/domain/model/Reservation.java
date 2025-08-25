@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Builder
 public class Reservation {
     private Long id;
     private String reservationNo;
@@ -65,6 +64,23 @@ public class Reservation {
     public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
     }
 
+    public static Reservation create(String reservationNo,
+                                     Long meetingRoomId,
+                                     LocalDateTime startTime,
+                                     LocalDateTime endTime,
+                                     String bookerName,
+                                     double totalAmount,
+                                     ReservationStatus status) {
+        Reservation r = new Reservation();
+        r.reservationNo = reservationNo;
+        r.meetingRoomId = meetingRoomId;
+        r.startTime = startTime;
+        r.endTime = endTime;
+        r.bookerName = bookerName;
+        r.totalAmount = totalAmount;
+        r.status = status;
+        return r;
+    }
 
     public void cancel() {
         if (this.status == ReservationStatus.CONFIRMED) {

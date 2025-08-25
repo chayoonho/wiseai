@@ -22,7 +22,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class PaymentService {
 
@@ -101,5 +100,12 @@ public class PaymentService {
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new IllegalStateException("동시성 충돌 발생. 결제를 재시도해주세요.");
         }
+    }
+
+    public PaymentStatus getPaymentStatus(Long reservationId) {
+        return null;
+    }
+
+    public void handleWebhook(String provider, Map<String, Object> webhookData) {
     }
 }
