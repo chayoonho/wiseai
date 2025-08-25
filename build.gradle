@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.5.4'
+	id 'org.springframework.boot' version '3.2.5'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -17,34 +17,24 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
-	// 전역적으로 JUnit4 / Vintage 제거 (안전망)
 	all {
 		exclude group: 'junit', module: 'junit'
 		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
 	}
 }
 
-repositories {
-	mavenCentral()
-}
-
 dependencies {
-	// Spring
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-	// DB driver (Boot BOM이 버전 관리하므로 버전 명시 X)
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
-	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 
-	// Test (JUnit 5 / Testcontainers)
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
 		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
 		exclude group: 'junit', module: 'junit'
@@ -55,12 +45,12 @@ dependencies {
 	testImplementation('org.testcontainers:mysql') {
 		exclude group: 'junit', module: 'junit'
 	}
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher' // IDE 실행용 런처
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	// Swagger / OpenAPI
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-	// Logging API (필요 시)
+	// Logging API
 	implementation 'org.slf4j:slf4j-api:2.0.7'
 }
 
