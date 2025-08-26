@@ -1,6 +1,5 @@
 package com.example.wiseai_dev.reservation.domain.model;
 
-import com.example.wiseai_dev.reservation.application.api.dto.ReservationUpdateRequest;
 import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -9,10 +8,10 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 public class Reservation {
     private Long id;
-    private String reservationNo;
     private Long meetingRoomId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -31,7 +30,6 @@ public class Reservation {
                        ReservationStatus reservationStatus,
                        double totalAmount)  {
         this.id = id;
-        this.reservationNo = reservationNo;
         this.meetingRoomId = meetingRoomId;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -57,22 +55,37 @@ public class Reservation {
         this.totalAmount = totalAmount;
     }
 
-
-    public Reservation(String reservationNo, @NotNull(message = "회의실 ID는 필수입니다.") Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, @NotNull(message = "예약자 이름은 필수입니다.") String bookerName, ReservationStatus reservationStatus, double totalAmount) {
-    }
-
     public Reservation(Long id, String reservationNo, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
     }
 
-    public static Reservation create(String reservationNo,
-                                     Long meetingRoomId,
+    public Reservation(Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String bookerName, ReservationStatus status, double totalAmount, long version) {
+    }
+
+    public Reservation(Long id,
+                       Long meetingRoomId,
+                       LocalDateTime startTime,
+                       LocalDateTime endTime,
+                       String bookerName,
+                       ReservationStatus status,
+                       double totalAmount,
+                       Long version) {
+        this.id = id;
+        this.meetingRoomId = meetingRoomId;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.bookerName = bookerName;
+        this.status = status;
+        this.totalAmount = totalAmount;
+        this.version = version;
+    }
+
+    public static Reservation create(Long meetingRoomId,
                                      LocalDateTime startTime,
                                      LocalDateTime endTime,
                                      String bookerName,
                                      double totalAmount,
                                      ReservationStatus status) {
         Reservation r = new Reservation();
-        r.reservationNo = reservationNo;
         r.meetingRoomId = meetingRoomId;
         r.startTime = startTime;
         r.endTime = endTime;

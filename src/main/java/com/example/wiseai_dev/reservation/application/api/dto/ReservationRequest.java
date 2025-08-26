@@ -27,9 +27,8 @@ public class ReservationRequest {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime endTime;
 
-    @Schema(description = "예약자 이름", example = "홍길동")
-    @NotNull(message = "예약자 이름은 필수입니다.")
-    private String bookerName;
+    @Schema(description = "예약자 ID", example = "1")
+    private Long userId;
 
     private String reservationNo;
 }

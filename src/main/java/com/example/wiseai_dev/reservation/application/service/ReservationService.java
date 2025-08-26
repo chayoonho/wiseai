@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
@@ -29,6 +28,7 @@ public class ReservationService {
     /**
      * 예약 생성
      */
+    @Transactional
     public ReservationResponse createReservation(ReservationRequest request) {
         validateReservationTime(request.getStartTime(), request.getEndTime());
         checkTimeAvailability(request.getMeetingRoomId(), request.getStartTime(), request.getEndTime());
@@ -39,21 +39,20 @@ public class ReservationService {
                 request.getEndTime()
         );
 
+        // 1. 저장
         Reservation newReservation = Reservation.create(
-                "TEMP",
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime(),
-                request.getBookerName(),
+                request.getUserId(),
                 totalAmount,
                 ReservationStatus.PENDING_PAYMENT
         );
 
         Reservation saved = reservationRepository.save(newReservation);
 
-        saved.setReservationNo("RES-" + saved.getId());
-        reservationRepository.flush();
 
+        // 2. 최종 응답 반환
         return ReservationResponse.fromEntity(saved);
     }
 
@@ -105,19 +104,20 @@ public class ReservationService {
     /**
      * 예약 취소 (낙관적 락)
      */
+    @Transactional
     public ReservationResponse updateReservationStatusToCancelled(Long id) {
-        try {
-            Reservation reservation = reservationRepository.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("취소하려는 예약 정보를 찾을 수 없습니다."));
+        Reservation reservation = reservationRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("취소하려는 예약 정보를 찾을 수 없습니다."));
 
-            reservation.setStatus(ReservationStatus.CANCELLED);
-
-            return ReservationResponse.fromEntity(reservationRepository.save(reservation));
-
-        } catch (OptimisticLockException e) {
-            throw new IllegalStateException("동시에 다른 사용자가 예약을 수정했습니다. 다시 시도해주세요.");
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new IllegalStateException("이미 취소된 예약입니다.");
         }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+
+        return ReservationResponse.fromEntity(reservationRepository.save(reservation));
     }
+
 
     // ====== 내부 비즈니스 로직 ======
     private void validateReservationTime(LocalDateTime startTime, LocalDateTime endTime) {

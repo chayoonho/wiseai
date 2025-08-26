@@ -1,35 +1,52 @@
 package com.example.wiseai_dev.payment.application.api.controller;
 
+import com.example.wiseai_dev.global.ApiResponse;
+import com.example.wiseai_dev.payment.application.api.dto.ProviderPayload;
 import com.example.wiseai_dev.payment.application.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/webhooks/payments")
+@RequiredArgsConstructor
 public class PaymentWebhookController {
 
     private final PaymentService paymentService;
 
-    public PaymentWebhookController(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
-
+    @Operation(
+            summary = "PG사 Webhook 수신",
+            description = "PG사에서 결제 결과를 우리 서버로 보내는 Webhook 엔드포인트입니다.",
+            requestBody = @RequestBody(
+                    required = true,
+                    content = @Content(
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Card 예시",
+                                            value = "{ \"transactionId\": \"TXN-20250825-0001\", \"status\": \"SUCCESS\", \"amount\": 30000 }"
+                                    ),
+                                    @ExampleObject(
+                                            name = "Simple 예시",
+                                            value = "{ \"transactionId\": \"TXN-20250825-0002\", \"status\": \"FAILED\", \"amount\": 15000 }"
+                                    ),
+                                    @ExampleObject(
+                                            name = "VirtualAccount 예시",
+                                            value = "{ \"transactionId\": \"TXN-20250825-0003\", \"status\": \"CANCELLED\", \"amount\": 50000 }"
+                                    )
+                            }
+                    )
+            )
+    )
     @PostMapping("/{provider}")
-    public ResponseEntity<Void> handleWebhook(
-            @PathVariable String provider,
-            @RequestBody Map<String, Object> webhookData) {
-        try {
-            paymentService.handleWebhook(provider, webhookData);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            // 지원하지 않는 결제사, 또는 잘못된 데이터일 경우 400 Bad Request 반환
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<ApiResponse<Void>> handleWebhook(
+            @PathVariable("provider") String provider,
+            @org.springframework.web.bind.annotation.RequestBody ProviderPayload payload) {
+
+        paymentService.handleWebhook(provider, payload);
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

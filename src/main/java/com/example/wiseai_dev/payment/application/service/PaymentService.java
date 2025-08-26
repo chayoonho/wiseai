@@ -1,6 +1,7 @@
 package com.example.wiseai_dev.payment.application.service;
 
 import com.example.wiseai_dev.payment.application.api.dto.PaymentResponse;
+import com.example.wiseai_dev.payment.application.api.dto.ProviderPayload;
 import com.example.wiseai_dev.payment.domain.gateway.PaymentGateway;
 import com.example.wiseai_dev.payment.domain.model.Payment;
 import com.example.wiseai_dev.payment.domain.model.PaymentProvider;
@@ -102,10 +103,34 @@ public class PaymentService {
         }
     }
 
+    @Transactional(readOnly = true)
     public PaymentStatus getPaymentStatus(Long reservationId) {
-        return null;
+        return paymentRepository.findByReservationId(reservationId)
+                .map(Payment::getStatus)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("결제 내역이 존재하지 않습니다. reservationId=" + reservationId)
+                );
     }
 
-    public void handleWebhook(String provider, Map<String, Object> webhookData) {
+    @Transactional
+    public void handleWebhook(String providerName, ProviderPayload payload) {
+        Payment payment = paymentRepository.findByTransactionId(payload.getTransactionId())
+                .orElseThrow(() -> new IllegalArgumentException("해당 거래 ID의 결제가 없습니다."));
+
+        // 상태 변환
+        PaymentStatus newStatus = PaymentStatus.valueOf(payload.getStatus().toUpperCase());
+        payment.setStatus(newStatus);
+
+        // 예약 상태도 업데이트
+        Reservation reservation = payment.getReservation();
+        if (newStatus == PaymentStatus.SUCCESS) {
+            reservation.setStatus(ReservationStatus.CONFIRMED);
+        } else if (newStatus == PaymentStatus.FAILED || newStatus == PaymentStatus.CANCELED) {
+            reservation.setStatus(ReservationStatus.CANCELLED);
+        }
+
+        // 저장
+        paymentRepository.save(payment);
+        reservationRepository.save(reservation);
     }
 }

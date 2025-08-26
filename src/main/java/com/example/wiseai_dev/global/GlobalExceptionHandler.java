@@ -70,13 +70,16 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(false, "검증 오류 발생", errors));
     }
 
-    // 5. 동시성 충돌 (Optimistic Lock)
-    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
-        log.warn("OptimisticLock 충돌 발생", e);
+    // 5. 동시성 충돌
+    @ExceptionHandler({
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(Exception e) {
+        log.warn("낙관적 락 충돌 발생", e);
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("동시성 충돌이 발생했습니다. 다시 시도해주세요."));
+                .body(ApiResponse.error("동시에 다른 사용자가 예약을 수정했습니다. 다시 시도해주세요."));
     }
 
     // 6. 모든 예외 처리 (예상 못한 서버 에러)
