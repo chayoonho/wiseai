@@ -61,7 +61,6 @@ public class ReservationResponse {
     public static ReservationResponse fromEntity(Reservation reservation) {
         ReservationResponse response = new ReservationResponse();
         response.setId(reservation.getId());
-        response.setReservationNo(reservation.getReservationNo());
         response.setMeetingRoomId(reservation.getMeetingRoomId());
         response.setStartTime(reservation.getStartTime());
         response.setEndTime(reservation.getEndTime());

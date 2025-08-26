@@ -10,11 +10,8 @@ import java.util.Optional;
 
 public interface PaymentRepository {
     Payment save(Payment payment);
-
     Optional<Payment> findById(Long id);
-
     Optional<Payment> findByReservationId(Long reservationId);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PaymentEntity p where p.reservation.id = :reservationId")
     Optional<Payment> findByReservationIdForUpdate(@Param("reservationId") Long reservationId);

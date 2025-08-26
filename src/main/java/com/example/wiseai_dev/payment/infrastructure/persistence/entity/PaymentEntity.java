@@ -41,7 +41,7 @@ public class PaymentEntity {
     @Column(nullable = false)
     private double amount;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "transaction_id", nullable = false, unique = true)
     private String transactionId;
 
     @Column(columnDefinition = "TEXT")

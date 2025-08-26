@@ -24,9 +24,6 @@ public class ReservationEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String reservationNo;
-
     @Column(nullable = false)
     private Long meetingRoomId;
 

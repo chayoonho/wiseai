@@ -102,8 +102,13 @@ public class PaymentService {
         }
     }
 
+    @Transactional(readOnly = true)
     public PaymentStatus getPaymentStatus(Long reservationId) {
-        return null;
+        return paymentRepository.findByReservationId(reservationId)
+                .map(Payment::getStatus)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("결제 내역이 존재하지 않습니다. reservationId=" + reservationId)
+                );
     }
 
     public void handleWebhook(String provider, Map<String, Object> webhookData) {
