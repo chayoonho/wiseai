@@ -1,6 +1,7 @@
 package com.example.wiseai_dev.reservation.infrastructrue.presistence.entity;
 
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
+import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,8 +34,9 @@ public class ReservationEntity {
     @Column(nullable = false)
     private LocalDateTime endTime;
 
-    @Column(nullable = false)
-    private String bookerName;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

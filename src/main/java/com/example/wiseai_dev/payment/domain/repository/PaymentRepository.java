@@ -15,4 +15,5 @@ public interface PaymentRepository {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PaymentEntity p where p.reservation.id = :reservationId")
     Optional<Payment> findByReservationIdForUpdate(@Param("reservationId") Long reservationId);
+    Optional<Payment> findByTransactionId(String transactionId);
 }

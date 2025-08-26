@@ -44,7 +44,7 @@ public class ReservationService {
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime(),
-                request.getBookerName(),
+                request.getUserId(),
                 totalAmount,
                 ReservationStatus.PENDING_PAYMENT
         );

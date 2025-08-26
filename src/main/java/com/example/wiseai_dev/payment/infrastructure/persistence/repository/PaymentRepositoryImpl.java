@@ -44,6 +44,12 @@ public class PaymentRepositoryImpl implements PaymentRepository {
                 .map(this::fromEntity);
     }
 
+    @Override
+    public Optional<Payment> findByTransactionId(String transactionId) {
+        return jpaRepository.findByTransactionId(transactionId)
+                .map(this::fromEntity);
+    }
+
     // --- 변환 메서드 ---
     private PaymentEntity toEntity(Payment domainModel) {
         if (domainModel == null) return null;
@@ -85,7 +91,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
                     .meetingRoomId(r.getMeetingRoomId())
                     .startTime(r.getStartTime())
                     .endTime(r.getEndTime())
-                    .bookerName(r.getBookerName())
+                    .bookerName(r.getUser().getName())
                     .status(r.getStatus() != null ? r.getStatus() : ReservationStatus.PENDING_PAYMENT)
                     .totalAmount(r.getTotalAmount())
                     .version(r.getVersion())
