@@ -33,7 +33,9 @@ public class PaymentController {
 
     @Operation(summary = "결제 상태 조회")
     @GetMapping("/{reservationId}/status")
-    public ResponseEntity<ApiResponse<PaymentStatus>> getPaymentStatus(@PathVariable Long reservationId) {
+    public ResponseEntity<ApiResponse<PaymentStatus>> getPaymentStatus(
+            @PathVariable Long reservationId) {
+
         PaymentStatus status = paymentService.getPaymentStatus(reservationId);
         return ResponseEntity.ok(ApiResponse.ok(status));
     }

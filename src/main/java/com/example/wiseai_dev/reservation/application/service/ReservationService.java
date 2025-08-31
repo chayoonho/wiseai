@@ -8,6 +8,9 @@ import com.example.wiseai_dev.reservation.application.api.dto.ReservationUpdateR
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
+import com.example.wiseai_dev.user.domain.model.User;
+import com.example.wiseai_dev.user.domain.repository.UserRepository;
+import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final MeetingRoomRepository meetingRoomRepository;
+    private final UserRepository userRepository;
 
     /**
      * 예약 생성
@@ -39,40 +43,49 @@ public class ReservationService {
                 request.getEndTime()
         );
 
-        // 1. 저장
+        // UserEntity → User 변환
+        UserEntity userEntity = UserEntity.fromDomainModel(userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다.")));
+        User user = userEntity.toDomainModel();
+
+        // 도메인 Reservation 생성
         Reservation newReservation = Reservation.create(
                 request.getMeetingRoomId(),
                 request.getStartTime(),
                 request.getEndTime(),
-                request.getUserId(),
+                user,
                 totalAmount,
                 ReservationStatus.PENDING_PAYMENT
         );
 
         Reservation saved = reservationRepository.save(newReservation);
-
-
-        // 2. 최종 응답 반환
-        return ReservationResponse.fromEntity(saved);
+        return ReservationResponse.fromDomain(saved);
     }
 
+    /**
+     * 예약 단건 조회
+     */
     @Transactional(readOnly = true)
     public ReservationResponse getReservationById(Long id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("예약 정보를 찾을 수 없습니다."));
-        return ReservationResponse.fromEntity(reservation);
+        return ReservationResponse.fromDomain(reservation);
     }
 
+    /**
+     * 예약 전체 조회
+     */
     @Transactional(readOnly = true)
     public List<ReservationResponse> getReservations() {
         return reservationRepository.findAll().stream()
-                .map(ReservationResponse::fromEntity)
+                .map(ReservationResponse::fromDomain)
                 .collect(Collectors.toList());
     }
 
     /**
-     * 예약 변경 - 낙관적 락 적용
+     * 예약 변경 (낙관적 락)
      */
+    @Transactional
     public ReservationResponse updateReservation(Long id, ReservationUpdateRequest request) {
         try {
             Reservation reservation = reservationRepository.findById(id)
@@ -87,14 +100,19 @@ public class ReservationService {
                     request.getEndTime()
             );
 
+            // userId로 User 갱신 (필요 시)
+            UserEntity userEntity = UserEntity.fromDomainModel(userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다.")));
+            User user = userEntity.toDomainModel();
+
             reservation.update(
                     request.getStartTime(),
                     request.getEndTime(),
-                    request.getBookerName(),
+                    user,
                     newTotalAmount
             );
 
-            return ReservationResponse.fromEntity(reservationRepository.save(reservation));
+            return ReservationResponse.fromDomain(reservationRepository.save(reservation));
 
         } catch (OptimisticLockException e) {
             throw new IllegalStateException("다른 사용자가 이미 예약을 변경했습니다. 다시 시도해주세요.");
@@ -114,10 +132,8 @@ public class ReservationService {
         }
 
         reservation.setStatus(ReservationStatus.CANCELLED);
-
-        return ReservationResponse.fromEntity(reservationRepository.save(reservation));
+        return ReservationResponse.fromDomain(reservationRepository.save(reservation));
     }
-
 
     // ====== 내부 비즈니스 로직 ======
     private void validateReservationTime(LocalDateTime startTime, LocalDateTime endTime) {

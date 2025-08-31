@@ -4,6 +4,7 @@ import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
 import com.example.wiseai_dev.reservation.infrastructrue.presistence.entity.ReservationEntity;
 import com.example.wiseai_dev.reservation.infrastructrue.presistence.jpa.ReservationJpaRepository;
+import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -79,7 +80,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                 entity.getMeetingRoomId(),
                 entity.getStartTime(),
                 entity.getEndTime(),
-                entity.getBookerName(),
+                entity.getUser().toDomainModel(),
                 entity.getStatus(),
                 entity.getTotalAmount(),
                 entity.getVersion()
@@ -93,7 +94,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                 domainModel.getMeetingRoomId(),
                 domainModel.getStartTime(),
                 domainModel.getEndTime(),
-                domainModel.getBookerName(),
+                UserEntity.fromDomainModel(domainModel.getUser()),
                 domainModel.getStatus(),
                 domainModel.getTotalAmount(),
                 domainModel.getVersion()
