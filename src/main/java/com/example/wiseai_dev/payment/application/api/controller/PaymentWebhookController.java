@@ -20,22 +20,23 @@ public class PaymentWebhookController {
 
     @Operation(
             summary = "PG사 Webhook 수신",
-            description = "PG사에서 결제 결과를 우리 서버로 보내는 Webhook 엔드포인트입니다.",
+            description = "PG사(Card, Simple, VirtualAccount 등)에서 결제 결과를 서버로 전송하는 Webhook 엔드포인트입니다.",
             requestBody = @RequestBody(
                     required = true,
+                    description = "PG사 Webhook에서 전달하는 결제 결과 데이터",
                     content = @Content(
                             examples = {
                                     @ExampleObject(
                                             name = "Card 예시",
-                                            value = "{ \"transactionId\": \"TXN-20250825-0001\", \"status\": \"SUCCESS\", \"amount\": 30000 }"
+                                            value = "{ \"transactionId\": \"CARD_12345\", \"status\": \"SUCCESS\", \"amount\": 30000 }"
                                     ),
                                     @ExampleObject(
                                             name = "Simple 예시",
-                                            value = "{ \"transactionId\": \"TXN-20250825-0002\", \"status\": \"FAILED\", \"amount\": 15000 }"
+                                            value = "{ \"transactionId\": \"SIMPLE_67890\", \"status\": \"FAILED\", \"amount\": 15000 }"
                                     ),
                                     @ExampleObject(
                                             name = "VirtualAccount 예시",
-                                            value = "{ \"transactionId\": \"TXN-20250825-0003\", \"status\": \"CANCELLED\", \"amount\": 50000 }"
+                                            value = "{ \"transactionId\": \"VIRT_11111\", \"status\": \"CANCELLED\", \"amount\": 50000 }"
                                     )
                             }
                     )

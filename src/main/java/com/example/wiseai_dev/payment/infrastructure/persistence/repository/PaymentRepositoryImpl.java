@@ -9,6 +9,8 @@ import com.example.wiseai_dev.payment.infrastructure.persistence.jpa.PaymentJpaR
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.infrastructrue.presistence.entity.ReservationEntity;
+import com.example.wiseai_dev.user.domain.model.User;
+import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -51,6 +53,10 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     // --- 변환 메서드 ---
+
+    /**
+     * 도메인 → 엔티티 변환
+     */
     private PaymentEntity toEntity(Payment domainModel) {
         if (domainModel == null) return null;
 
@@ -79,6 +85,9 @@ public class PaymentRepositoryImpl implements PaymentRepository {
         return entity;
     }
 
+    /**
+     * 엔티티 → 도메인 변환
+     */
     private Payment fromEntity(PaymentEntity entity) {
         if (entity == null) return null;
 
@@ -86,12 +95,24 @@ public class PaymentRepositoryImpl implements PaymentRepository {
         Reservation reservationDomain = null;
         if (entity.getReservation() != null) {
             ReservationEntity r = entity.getReservation();
+
+            // UserEntity → User
+            User userDomain = null;
+            if (r.getUser() != null) {
+                UserEntity u = r.getUser();
+                userDomain = User.builder()
+                        .id(u.getId())
+                        .name(u.getName())
+                        .email(u.getEmail())
+                        .build();
+            }
+
             reservationDomain = Reservation.builder()
                     .id(r.getId())
                     .meetingRoomId(r.getMeetingRoomId())
                     .startTime(r.getStartTime())
                     .endTime(r.getEndTime())
-                    .bookerName(r.getUser().getName())
+                    .user(userDomain)
                     .status(r.getStatus() != null ? r.getStatus() : ReservationStatus.PENDING_PAYMENT)
                     .totalAmount(r.getTotalAmount())
                     .version(r.getVersion())

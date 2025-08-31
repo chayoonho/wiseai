@@ -17,8 +17,11 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,6 +57,10 @@ public class PaymentService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 예약입니다."));
 
+        if (reservation.getStatus() == ReservationStatus.CANCELLED){
+            throw new IllegalStateException("취소된 예약입니다.");
+        }
+
         if (reservation.getStatus() != ReservationStatus.PENDING_PAYMENT) {
             throw new IllegalStateException("이미 결제 처리된 예약입니다.");
         }
@@ -72,22 +79,33 @@ public class PaymentService {
             throw new IllegalArgumentException("등록되지 않은 결제 게이트웨이: " + paymentProviderName);
         }
 
-        // 4. 결제 요청 생성
+        //  4. transactionId 채번
+        String generatedTransactionId = "TXN-" +
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) +
+                "-" +
+                UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        // 5. 결제 요청 생성
         Payment newPayment = new Payment(
-                null, reservation, paymentProvider, PaymentStatus.PENDING,
-                reservation.getTotalAmount(), null, 0L
+                null,
+                reservation,
+                paymentProvider,
+                PaymentStatus.PENDING,
+                reservation.getTotalAmount(),
+                generatedTransactionId,
+                0L
         );
 
         try {
-            // 5. PG사 호출
+            // 6. PG사 호출
             PaymentResult paymentResult = gateway.processPayment(newPayment);
 
-            // 6. Payment 저장
+            // 7. Payment 저장
             newPayment.setTransactionId(paymentResult.getTransactionId());
             newPayment.setStatus(paymentResult.getStatus());
             Payment savedPayment = paymentRepository.save(newPayment);
 
-            // 7. Reservation 상태 업데이트
+            // 8. Reservation 상태 업데이트
             if (paymentResult.getStatus() == PaymentStatus.SUCCESS) {
                 reservation.setStatus(ReservationStatus.CONFIRMED);
             } else {
@@ -95,7 +113,7 @@ public class PaymentService {
             }
             reservationRepository.save(reservation);
 
-            // 8. DTO 응답 반환
+            // 9. DTO 응답 반환
             return PaymentResponse.from(savedPayment, reservation);
 
         } catch (ObjectOptimisticLockingFailureException e) {

@@ -6,67 +6,73 @@ import com.example.wiseai_dev.payment.domain.model.PaymentResult;
 import com.example.wiseai_dev.payment.domain.model.PaymentStatus;
 import com.example.wiseai_dev.payment.infrastructure.persistence.entity.PaymentEntity;
 import com.example.wiseai_dev.payment.infrastructure.persistence.jpa.PaymentJpaRepository;
-import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
 public class CardPaymentGateway implements PaymentGateway {
+
+    private final PaymentJpaRepository paymentJpaRepository;
+
     public CardPaymentGateway(PaymentJpaRepository paymentJpaRepository) {
         this.paymentJpaRepository = paymentJpaRepository;
     }
 
+    /**
+     * Mock 결제 처리 (A사 카드결제)
+     */
     @Override
-    public PaymentResult  processPayment(Payment payment) {
-        // A사 API 호출
-        String rawResponse = "{\"status\":\"SUCCESS\", \"txnId\":\"CARD_12345\"}";
+    public PaymentResult processPayment(Payment payment) {
+        // 실제 PG사 API 대신 가짜 응답 생성
+        String generatedId = "CARD_" + UUID.randomUUID().toString().substring(0, 8); //
+        String rawResponse = String.format("{\"status\":\"SUCCESS\", \"txnId\":\"%s\"}", generatedId);
+
+        log.info("[CardPaymentGateway] Mock 결제 성공. transactionId={}, amount={}", generatedId, payment.getAmount());
 
         return PaymentResult.builder()
                 .status(PaymentStatus.SUCCESS)
-                .transactionId("CARD_12345")
+                .transactionId(generatedId)    //
                 .providerName("A사_카드결제")
                 .rawResponse(rawResponse)
                 .build();
+    }
 
-            }
-
-    private final PaymentJpaRepository paymentJpaRepository;
-
+    /**
+     * Mock 웹훅 처리
+     */
     @Override
     public void processWebhook(Map<String, Object> webhookData) {
-        // 웹훅 데이터에서 필요한 정보(예: 거래 ID, 상태) 추출
         String transactionId = (String) webhookData.get("transactionId");
         String statusString = (String) webhookData.get("status");
 
         if (transactionId == null || statusString == null) {
-//            log.error("Invalid webhook data received: {}", webhookData);
             throw new IllegalArgumentException("웹훅 데이터에 transactionId 또는 status가 누락되었습니다.");
         }
 
         try {
-            // 1. 거래 ID를 통해 Payment 엔티티를 조회
-            PaymentEntity paymentEntity = (PaymentEntity) paymentJpaRepository.findByTransactionId(transactionId)
+            // 1. 거래 ID로 Payment 엔티티 조회
+            PaymentEntity paymentEntity = paymentJpaRepository.findByTransactionId(transactionId)
                     .orElseThrow(() -> new IllegalArgumentException("Payment not found for transactionId: " + transactionId));
 
-            // 2. 웹훅 상태 문자열을 Enum으로 변환
+            // 2. 상태 업데이트
             PaymentStatus newStatus = PaymentStatus.valueOf(statusString);
-
-            // 3. Payment 엔티티의 상태 업데이트
             paymentEntity.setStatus(newStatus);
 
-            // 4. 변경된 엔티티를 DB에 저장
+            // 3. 저장
             paymentJpaRepository.save(paymentEntity);
 
-            log.info("Successfully processed webhook for transactionId: {}. Status updated to: {}", transactionId, newStatus);
+            log.info("[CardPaymentGateway] 웹훅 처리 완료. transactionId={}, status={}", transactionId, newStatus);
 
         } catch (IllegalArgumentException e) {
-            log.error("Failed to process webhook: {}", e.getMessage());
+            log.error("Webhook 처리 실패: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("An unexpected error occurred while processing webhook: {}", e.getMessage());
-            throw new RuntimeException("웹훅 처리 중 예상치 못한 오류 발생", e);
+            log.error("웹훅 처리 중 예기치 못한 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("웹훅 처리 실패", e);
         }
     }
 }

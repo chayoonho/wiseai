@@ -11,8 +11,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@Schema(name = "ReservationResponse",
-        description = "회의실 예약 응답",
+@Schema(
+        name = "ReservationResponse",
+        description = "회의실 예약 응답 DTO",
         example = "{\n" +
                 "  \"id\": 1001,\n" +
                 "  \"reservationNo\": \"RES-1001\",\n" +
@@ -22,7 +23,8 @@ import java.time.LocalDateTime;
                 "  \"bookerName\": \"홍길동\",\n" +
                 "  \"status\": \"CONFIRMED\",\n" +
                 "  \"totalAmount\": 30000\n" +
-                "}")
+                "}"
+)
 public class ReservationResponse {
 
     @Schema(description = "예약 ID", example = "1001")
@@ -56,15 +58,20 @@ public class ReservationResponse {
     private double totalAmount;
 
     /**
-     * Entity -> DTO 변환용 정적 팩토리 메서드
+     * Domain → Response 변환
      */
-    public static ReservationResponse fromEntity(Reservation reservation) {
+    public static ReservationResponse fromDomain(Reservation reservation) {
         ReservationResponse response = new ReservationResponse();
         response.setId(reservation.getId());
+        response.setReservationNo("RES-" + reservation.getId()); // 예약번호 생성 규칙
         response.setMeetingRoomId(reservation.getMeetingRoomId());
         response.setStartTime(reservation.getStartTime());
         response.setEndTime(reservation.getEndTime());
-        response.setBookerName(reservation.getBookerName());
+
+        if (reservation.getUser() != null) {
+            response.setBookerName(reservation.getUser().getName());
+        }
+
         response.setStatus(reservation.getStatus());
         response.setTotalAmount(reservation.getTotalAmount());
         return response;

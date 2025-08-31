@@ -1,8 +1,6 @@
 package com.example.wiseai_dev.reservation.application.api.dto;
 
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,14 +10,12 @@ import java.time.LocalDateTime;
 @Setter
 public class ReservationUpdateRequest {
 
-    @NotNull(message = "시작 시간은 필수입니다.")
-    @Future(message = "시작 시간은 현재 시각 이후여야 합니다.")
+    @Schema(description = "예약 시작 시간", example = "2025-09-01T14:00:00")
     private LocalDateTime startTime;
 
-    @NotNull(message = "종료 시간은 필수입니다.")
-    @Future(message = "종료 시간은 현재 시각 이후여야 합니다.")
+    @Schema(description = "예약 종료 시간", example = "2025-09-01T16:00:00")
     private LocalDateTime endTime;
 
-    @NotBlank(message = "예약자 이름은 필수입니다.")
-    private String bookerName;
+    @Schema(description = "사용자 ID", example = "1")
+    private Long userId;
 }
