@@ -12,12 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,15 +33,15 @@ class PaymentServiceConcurrencyTest {
     private PaymentJpaRepository paymentJpaRepository;
 
     private Long reservationId;
-    private final String paymentProviderName = "Card";
+    private static final String PAYMENT_PROVIDER = "Card";
 
     @BeforeEach
-    void 테스트_데이터_세팅() {
-        // 이전 테스트 데이터 정리
+    void 테스트_데이터_준비() {
+        // 테스트 데이터 정리
         paymentJpaRepository.deleteAll();
         reservationRepository.deleteAll();
 
-        // 예약 데이터 초기화
+        // 예약 데이터 생성
         Reservation newReservation = new Reservation(
                 null,
                 "RES-1",
@@ -57,53 +54,60 @@ class PaymentServiceConcurrencyTest {
                 0L
         );
 
-        Reservation savedReservation = reservationRepository.save(newReservation);
-        this.reservationId = savedReservation.getId();
+        this.reservationId = reservationRepository.save(newReservation).getId();
     }
 
     @Test
-    @DisplayName("동일 예약 동시 결제 시 하나만 성공하고 나머지는 실패한다")
-    void 동일_예약_동시_결제_하나만_성공() throws InterruptedException {
-        // Given
+    @DisplayName("동시에 여러 결제 요청이 들어오면 하나만 성공하고 나머지는 실패한다")
+    void 동시에_여러_결제_요청시_하나만_성공한다() throws InterruptedException {
+        // given
         int threadCount = 5;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch readyLatch = new CountDownLatch(threadCount);
         CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch endLatch = new CountDownLatch(threadCount);
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failureCount = new AtomicInteger(0);
+        CountDownLatch doneLatch = new CountDownLatch(threadCount);
 
-        // When - 여러 스레드가 동시에 결제 요청
+        AtomicInteger successCount = new AtomicInteger();
+        AtomicInteger failureCount = new AtomicInteger();
+
+        // when - 여러 스레드가 동시에 결제 요청
         for (int i = 0; i < threadCount; i++) {
-            executorService.submit(() -> {
+            executor.submit(() -> {
+                readyLatch.countDown(); // 준비 완료
                 try {
-                    startLatch.await(); // 모든 스레드가 동시에 시작
-                    paymentService.processReservationPayment(reservationId, paymentProviderName);
+                    startLatch.await(); // 동시에 시작
+                    paymentService.processReservationPayment(reservationId, PAYMENT_PROVIDER);
                     successCount.incrementAndGet();
                 } catch (IllegalStateException | org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                    failureCount.incrementAndGet();
+                    failureCount.incrementAndGet(); // 결제 실패 (동시성 충돌)
                 } catch (Exception e) {
-                    System.err.println("예외 발생: " + e.getClass().getName() + " - " + e.getMessage());
+                    System.err.printf("예외 발생: %s - %s%n", e.getClass().getName(), e.getMessage());
                 } finally {
-                    endLatch.countDown();
+                    doneLatch.countDown();
                 }
             });
         }
 
-        // 모든 스레드 시작
+        // 모든 스레드 준비될 때까지 대기
+        readyLatch.await();
+        // 동시에 시작
         startLatch.countDown();
-        endLatch.await();
-        executorService.shutdown();
+        // 모든 스레드 종료 대기
+        doneLatch.await();
+        executor.shutdown();
 
-        // Then
+        // then
         assertThat(successCount.get())
-                .as("성공 횟수는 반드시 1이어야 한다")
+                .as("결제 성공은 정확히 1건이어야 한다")
                 .isEqualTo(1);
 
         assertThat(failureCount.get())
-                .as("실패 횟수는 나머지 스레드 수와 같아야 한다")
+                .as("결제 실패는 나머지 스레드 수와 같아야 한다")
                 .isEqualTo(threadCount - 1);
 
         Reservation finalReservation = reservationRepository.findById(reservationId).orElseThrow();
-        assertThat(finalReservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(finalReservation.getStatus())
+                .as("최종 예약 상태는 CONFIRMED 이어야 한다")
+                .isEqualTo(ReservationStatus.CONFIRMED);
     }
 }

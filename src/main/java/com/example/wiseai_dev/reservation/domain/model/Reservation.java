@@ -32,6 +32,9 @@ public class Reservation {
     @Version
     private long version;
 
+    public Reservation(Object o, String s, long l, LocalDateTime now, LocalDateTime localDateTime, String tester, ReservationStatus reservationStatus, double v, long l1) {
+    }
+
     /**
      * 예약 생성 팩토리 메서드
      */
