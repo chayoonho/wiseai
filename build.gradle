@@ -17,13 +17,10 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
-	all {
-		exclude group: 'junit', module: 'junit'
-		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-	}
 }
 
 dependencies {
+	// --- 메인 ---
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -35,25 +32,40 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 
-	testImplementation('org.springframework.boot:spring-boot-starter-test') {
-		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-		exclude group: 'junit', module: 'junit'
-	}
-	testImplementation('org.springframework.boot:spring-boot-testcontainers') {
-		exclude group: 'junit', module: 'junit'
-	}
-	testImplementation('org.testcontainers:mysql') {
-		exclude group: 'junit', module: 'junit'
-	}
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// --- 테스트 (JUnit5만 사용) ---
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-	// Swagger / OpenAPI
+	testImplementation platform("org.junit:junit-bom:5.10.2")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+	testImplementation "org.mockito:mockito-core:5.12.0"
+	testImplementation "org.mockito:mockito-junit-jupiter:5.12.0"
+	testImplementation "org.assertj:assertj-core:3.26.3"
+
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:mysql'
+
+	// H2 인메모리 데이터베이스 (테스트용)
+	testImplementation 'com.h2database:h2'
+	testRuntimeOnly 'com.h2database:h2'
+
+	// --- Swagger / OpenAPI ---
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-	// Logging API
+	// --- Logging API ---
 	implementation 'org.slf4j:slf4j-api:2.0.7'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// 테스트 실패 시 상세 정보 출력
+	testLogging {
+		events "passed", "skipped", "failed", "standardOut", "standardError"
+		exceptionFormat "full"
+		showCauses true
+		showExceptions true
+		showStackTraces true
+	}
 }

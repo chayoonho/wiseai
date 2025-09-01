@@ -56,10 +56,10 @@ spring:
     activate:
       on-profile: test
   datasource:
-    url: jdbc:mysql://db:3306/wiseai_dev
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -67,7 +67,12 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.H2Dialect
+    # Hibernate가 스키마 생성한 이후 data.sql 실행되도록 설정
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
 
 logging:
   level:
@@ -83,7 +88,7 @@ springdoc:
     # 필요시 특정 경로만 노출
     paths-to-match: /api/**, /webhooks/**
   swagger-ui:
-    path: /swagger-ui/index.html   # 권장 (springdoc 기본 경로)
+    path: /swagger-ui/index.html
     tags-sorter: alpha
     operations-sorter: alpha
     disable-swagger-default-url: true

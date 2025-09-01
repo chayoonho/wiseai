@@ -47,7 +47,4 @@ public class ReservationEntity {
 
     @Version
     private long version;
-
-    public ReservationEntity(Long id, Long meetingRoomId, LocalDateTime startTime, LocalDateTime endTime, String userId, ReservationStatus status, double totalAmount, long version) {
-    }
 }

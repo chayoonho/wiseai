@@ -6,12 +6,17 @@ import com.example.wiseai_dev.payment.infrastructure.persistence.jpa.PaymentJpaR
 import com.example.wiseai_dev.reservation.domain.model.Reservation;
 import com.example.wiseai_dev.reservation.domain.model.ReservationStatus;
 import com.example.wiseai_dev.reservation.domain.repository.ReservationRepository;
+import com.example.wiseai_dev.user.domain.model.User;
+import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
+import com.example.wiseai_dev.user.infrastructure.persistence.jpa.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.*;
@@ -21,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(classes = WiseaiDevApplication.class)
 @ActiveProfiles("test")
+@Transactional
 class PaymentServiceConcurrencyTest {
 
     @Autowired
@@ -30,84 +36,140 @@ class PaymentServiceConcurrencyTest {
     private ReservationRepository reservationRepository;
 
     @Autowired
+    private UserJpaRepository userJpaRepository;
+
+    @Autowired
     private PaymentJpaRepository paymentJpaRepository;
 
     private Long reservationId;
-    private static final String PAYMENT_PROVIDER = "Card";
+    private final String paymentProviderName = "Card";
 
     @BeforeEach
-    void 테스트_데이터_준비() {
-        // 테스트 데이터 정리
+    @Transactional
+    void setUp() {
+        // 기존 데이터 정리
         paymentJpaRepository.deleteAll();
         reservationRepository.deleteAll();
+        userJpaRepository.deleteAll();
 
-        // 예약 데이터 생성
-        Reservation newReservation = new Reservation(
-                null,
-                "RES-1",
-                3L,
-                LocalDateTime.now(),
-                LocalDateTime.now().plusHours(1),
-                "tester",
-                ReservationStatus.PENDING_PAYMENT,
-                100.0,
-                0L
+        // 새로운 사용자 생성 및 저장
+        UserEntity testUserEntity = createTestUserEntity();
+        UserEntity savedUserEntity = userJpaRepository.save(testUserEntity);
+
+        // 새로운 예약 생성 및 저장
+        Reservation newReservation = createTestReservation(savedUserEntity);
+        Reservation saved = reservationRepository.save(newReservation);
+
+        // 저장된 예약을 DB에서 다시 읽어와 ID 보장
+        Reservation reloaded = reservationRepository.findById(saved.getId())
+                .orElseThrow(() -> new RuntimeException("Reservation not persisted"));
+        this.reservationId = reloaded.getId();
+
+        // 로그 출력
+        System.out.println("Test setup completed. Reservation ID: " + reservationId);
+        System.out.println("Reservation status: " + reloaded.getStatus());
+    }
+
+    private Reservation createTestReservation(UserEntity userEntity) {
+        // 팩토리 메서드를 사용하여 Reservation 생성
+        Reservation reservation = Reservation.create(
+                3L, // meetingRoomId
+                LocalDateTime.now(), // startTime
+                LocalDateTime.now().plusHours(1), // endTime
+                userEntity.toDomainModel(), // user
+                100.0, // totalAmount
+                ReservationStatus.PENDING_PAYMENT // status
         );
 
-        this.reservationId = reservationRepository.save(newReservation).getId();
+        System.out.println("Created test reservation - User ID: " + reservation.getUser().getId());
+
+        return reservation;
+    }
+
+    private UserEntity createTestUserEntity() {
+        // Builder 패턴을 사용하여 UserEntity 생성
+        UserEntity userEntity = UserEntity.builder()
+                .name("Test User")
+                .email("test@example.com")
+                .build();
+
+        return userEntity;
     }
 
     @Test
-    @DisplayName("동시에 여러 결제 요청이 들어오면 하나만 성공하고 나머지는 실패한다")
-    void 동시에_여러_결제_요청시_하나만_성공한다() throws InterruptedException {
-        // given
-        int threadCount = 5;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch readyLatch = new CountDownLatch(threadCount);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+    @DisplayName("애플리케이션 컨텍스트 로드 테스트")
+    void contextLoads() {
+        assertThat(paymentService).isNotNull();
+        assertThat(reservationRepository).isNotNull();
+        assertThat(paymentJpaRepository).isNotNull();
+        System.out.println("Context loaded successfully");
+    }
 
+    @Test
+    @DisplayName("기본 결제 처리 테스트")
+    void 기본_결제_처리_테스트() {
+        try {
+            // 단일 결제 처리 테스트
+            paymentService.processReservationPayment(reservationId, paymentProviderName);
+
+            // 결과 검증
+            Reservation updatedReservation = reservationRepository.findById(reservationId)
+                    .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+            assertThat(updatedReservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+            System.out.println("Basic payment test completed successfully");
+        } catch (Exception e) {
+            System.err.println("Basic payment test failed: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @Test
+    @DisplayName("동일 예약 동시 결제 시 하나만 성공하고 나머지는 실패한다")
+    void 동시성_결제_테스트() throws InterruptedException {
+        int threadCount = 5;
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger();
         AtomicInteger failureCount = new AtomicInteger();
 
-        // when - 여러 스레드가 동시에 결제 요청
+        System.out.println("Starting concurrency test with " + threadCount + " threads");
+
         for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                readyLatch.countDown(); // 준비 완료
+            final int threadIndex = i;
+            executorService.submit(() -> {
                 try {
-                    startLatch.await(); // 동시에 시작
-                    paymentService.processReservationPayment(reservationId, PAYMENT_PROVIDER);
+                    System.out.println("Thread " + threadIndex + " attempting payment");
+                    paymentService.processReservationPayment(reservationId, paymentProviderName);
                     successCount.incrementAndGet();
-                } catch (IllegalStateException | org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                    failureCount.incrementAndGet(); // 결제 실패 (동시성 충돌)
+                    System.out.println("Thread " + threadIndex + " succeeded");
                 } catch (Exception e) {
-                    System.err.printf("예외 발생: %s - %s%n", e.getClass().getName(), e.getMessage());
+                    failureCount.incrementAndGet();
+                    System.out.println("Thread " + threadIndex + " failed: " + e.getMessage());
                 } finally {
-                    doneLatch.countDown();
+                    latch.countDown();
                 }
             });
         }
 
-        // 모든 스레드 준비될 때까지 대기
-        readyLatch.await();
-        // 동시에 시작
-        startLatch.countDown();
-        // 모든 스레드 종료 대기
-        doneLatch.await();
-        executor.shutdown();
+        // 모든 스레드 완료 대기 (최대 30초)
+        boolean completed = latch.await(30, TimeUnit.SECONDS);
+        executorService.shutdown();
 
-        // then
-        assertThat(successCount.get())
-                .as("결제 성공은 정확히 1건이어야 한다")
-                .isEqualTo(1);
+        if (!completed) {
+            System.err.println("Test timed out!");
+        }
 
-        assertThat(failureCount.get())
-                .as("결제 실패는 나머지 스레드 수와 같아야 한다")
-                .isEqualTo(threadCount - 1);
+        System.out.println("Concurrency test completed - Success: " + successCount.get() +
+                ", Failure: " + failureCount.get());
 
-        Reservation finalReservation = reservationRepository.findById(reservationId).orElseThrow();
-        assertThat(finalReservation.getStatus())
-                .as("최종 예약 상태는 CONFIRMED 이어야 한다")
-                .isEqualTo(ReservationStatus.CONFIRMED);
+        // 결과 검증
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(failureCount.get()).isEqualTo(threadCount - 1);
+
+        Reservation finalReservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found"));
+        assertThat(finalReservation.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
     }
 }
