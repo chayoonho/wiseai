@@ -13,18 +13,18 @@ import java.time.LocalDateTime;
 @Setter
 @Schema(
         name = "ReservationResponse",
-        description = "회의실 예약 응답 DTO",
+        description = "회의실 예약 응답",
         example = "{\n" +
                 "  \"id\": 1001,\n" +
                 "  \"reservationNo\": \"RES-1001\",\n" +
                 "  \"meetingRoomId\": 1,\n" +
                 "  \"startTime\": \"2025-08-21T21:00:00\",\n" +
                 "  \"endTime\": \"2025-08-21T22:00:00\",\n" +
+                "  \"userId\": 1,\n" +
                 "  \"bookerName\": \"홍길동\",\n" +
                 "  \"status\": \"CONFIRMED\",\n" +
                 "  \"totalAmount\": 30000\n" +
-                "}"
-)
+                "}")
 public class ReservationResponse {
 
     @Schema(description = "예약 ID", example = "1001")
@@ -44,6 +44,9 @@ public class ReservationResponse {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime endTime;
 
+    @Schema(description = "사용자 ID", example = "1")
+    private Long userId;
+
     @Schema(description = "예약자 이름", example = "홍길동")
     private String bookerName;
 
@@ -58,17 +61,37 @@ public class ReservationResponse {
     private double totalAmount;
 
     /**
-     * Domain → Response 변환
+     * Entity -> DTO 변환용 정적 팩토리 메서드 (구버전 유지용)
      */
-    public static ReservationResponse fromDomain(Reservation reservation) {
+    public static ReservationResponse fromEntity(Reservation reservation) {
         ReservationResponse response = new ReservationResponse();
         response.setId(reservation.getId());
-        response.setReservationNo("RES-" + reservation.getId()); // 예약번호 생성 규칙
         response.setMeetingRoomId(reservation.getMeetingRoomId());
         response.setStartTime(reservation.getStartTime());
         response.setEndTime(reservation.getEndTime());
 
         if (reservation.getUser() != null) {
+            response.setUserId(reservation.getUser().getId());
+            response.setBookerName(reservation.getUser().getName());
+        }
+
+        response.setStatus(reservation.getStatus());
+        response.setTotalAmount(reservation.getTotalAmount());
+        return response;
+    }
+
+    /**
+     * Domain -> DTO 변환
+     */
+    public static ReservationResponse fromDomain(Reservation reservation) {
+        ReservationResponse response = new ReservationResponse();
+        response.setId(reservation.getId());
+        response.setMeetingRoomId(reservation.getMeetingRoomId());
+        response.setStartTime(reservation.getStartTime());
+        response.setEndTime(reservation.getEndTime());
+
+        if (reservation.getUser() != null) {
+            response.setUserId(reservation.getUser().getId());
             response.setBookerName(reservation.getUser().getName());
         }
 

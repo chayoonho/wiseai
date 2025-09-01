@@ -108,7 +108,7 @@ public class ReservationService {
             reservation.update(
                     request.getStartTime(),
                     request.getEndTime(),
-                    user,
+                    user, //todo
                     newTotalAmount
             );
 

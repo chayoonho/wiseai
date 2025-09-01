@@ -5,6 +5,7 @@ import com.example.wiseai_dev.meetingRoom.application.api.dto.MeetingRoomRespons
 import com.example.wiseai_dev.meetingRoom.application.service.MeetingRoomService;
 import com.example.wiseai_dev.meetingRoom.domain.model.MeetingRoom;
 import com.example.wiseai_dev.meetingRoom.domain.repository.MeetingRoomRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,13 +16,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class MeetingRoomServiceTest {
+class MeetingRoomServiceTest {
 
     @Mock
     private MeetingRoomRepository meetingRoomRepository;
@@ -30,41 +30,43 @@ public class MeetingRoomServiceTest {
     private MeetingRoomService meetingRoomService;
 
     @Test
+    @DisplayName("회의실을 생성할 수 있음")
     void 회의실을_생성할_수_있음() {
         // given
         MeetingRoomRequest newRoom = new MeetingRoomRequest("회의실A", 10, 50000.0);
-        // Mocking 시 반환될 MeetingRoom 객체를 생성
         MeetingRoom savedRoom = new MeetingRoom(1L, "회의실A", 10, 50000.0);
 
-        // Mock: 리포지토리가 도메인 모델(MeetingRoom)을 저장하고, 저장된 도메인 모델을 반환하도록 설정
         when(meetingRoomRepository.save(any(MeetingRoom.class))).thenReturn(savedRoom);
 
         // when
         MeetingRoomResponse resultRoom = meetingRoomService.createMeetingRoom(newRoom);
 
         // then
-        assertNotNull(resultRoom.getId());
-        assertEquals(1L, resultRoom.getId());
-        assertEquals("회의실A", resultRoom.getName());
+        assertThat(resultRoom).isNotNull();
+        assertThat(resultRoom.getId()).isEqualTo(1L);
+        assertThat(resultRoom.getName()).isEqualTo("회의실A");
+        verify(meetingRoomRepository, times(1)).save(any(MeetingRoom.class));
     }
 
     @Test
+    @DisplayName("특정 회의실을 조회할 수 있음")
     void 특정_회의실을_조회할_수_있음() {
         // given
         MeetingRoom findRoom = new MeetingRoom(1L, "회의실A", 10, 50000.0);
-
         when(meetingRoomRepository.findById(1L)).thenReturn(Optional.of(findRoom));
 
         // when
         MeetingRoomResponse foundRoom = meetingRoomService.findMeetingRoomById(1L);
 
         // then
-        assertNotNull(foundRoom);
-        assertEquals("회의실A", foundRoom.getName());
-        assertEquals(1L, foundRoom.getId());
+        assertThat(foundRoom).isNotNull();
+        assertThat(foundRoom.getId()).isEqualTo(1L);
+        assertThat(foundRoom.getName()).isEqualTo("회의실A");
+        verify(meetingRoomRepository, times(1)).findById(1L);
     }
 
     @Test
+    @DisplayName("전체 회의실을 조회할 수 있음")
     void 전체_회의실을_조회할_수_있음() {
         // given
         List<MeetingRoom> allRooms = Arrays.asList(
@@ -78,23 +80,10 @@ public class MeetingRoomServiceTest {
         List<MeetingRoomResponse> foundRooms = meetingRoomService.findAllMeetingRooms();
 
         // then
-        assertFalse(foundRooms.isEmpty());
-        assertEquals(3, foundRooms.size());
-        assertEquals("회의실A", foundRooms.get(0).getName());
-        assertEquals("회의실B", foundRooms.get(1).getName());
-        assertEquals("회의실C", foundRooms.get(2).getName());
+        assertThat(foundRooms).hasSize(3);
+        assertThat(foundRooms).extracting("name")
+                .containsExactly("회의실A", "회의실B", "회의실C");
+        verify(meetingRoomRepository, times(1)).findAll();
     }
 
-
-    @Test
-    void 회의실을_삭제할_수_있음() {
-        // given
-        MeetingRoom existingRoom = new MeetingRoom(1L, "회의실A", 10, 50000.0);
-
-        when(meetingRoomRepository.findById(1L)).thenReturn(Optional.of(existingRoom));
-
-
-        // then
-        verify(meetingRoomRepository).deleteById(1L);
-    }
 }

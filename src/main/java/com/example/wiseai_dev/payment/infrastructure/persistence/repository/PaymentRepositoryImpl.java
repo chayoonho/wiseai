@@ -112,7 +112,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
                     .meetingRoomId(r.getMeetingRoomId())
                     .startTime(r.getStartTime())
                     .endTime(r.getEndTime())
-                    .user(userDomain)
+//                    .user(userDomain)
                     .status(r.getStatus() != null ? r.getStatus() : ReservationStatus.PENDING_PAYMENT)
                     .totalAmount(r.getTotalAmount())
                     .version(r.getVersion())
