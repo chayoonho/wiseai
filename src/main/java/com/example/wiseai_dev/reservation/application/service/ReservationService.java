@@ -13,6 +13,8 @@ import com.example.wiseai_dev.user.domain.repository.UserRepository;
 import com.example.wiseai_dev.user.infrastructure.persistence.entity.UserEntity;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,45 +85,56 @@ public class ReservationService {
     }
 
     /**
-     * 예약 변경 (낙관적 락)
+     * 예약 변경 (낙관적 락 + 재시도)
+     * - 결제가 완료되지 않은(PENDING_PAYMENT) 상태에서만 변경 가능
      */
+    @Retryable(
+            value = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100)
+    )
     @Transactional
     public ReservationResponse updateReservation(Long id, ReservationUpdateRequest request) {
-        try {
-            Reservation reservation = reservationRepository.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("예약 정보를 찾을 수 없습니다."));
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("예약 정보를 찾을 수 없습니다."));
 
-            validateReservationTime(request.getStartTime(), request.getEndTime());
-            checkTimeAvailability(reservation.getMeetingRoomId(), request.getStartTime(), request.getEndTime(), id);
-
-            double newTotalAmount = calculateTotalAmount(
-                    reservation.getMeetingRoomId(),
-                    request.getStartTime(),
-                    request.getEndTime()
-            );
-
-            // userId로 User 갱신 (필요 시)
-            UserEntity userEntity = UserEntity.fromDomainModel(userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다.")));
-            User user = userEntity.toDomainModel();
-
-            reservation.update(
-                    request.getStartTime(),
-                    request.getEndTime(),
-                    user, //todo
-                    newTotalAmount
-            );
-
-            return ReservationResponse.fromDomain(reservationRepository.save(reservation));
-
-        } catch (OptimisticLockException e) {
-            throw new IllegalStateException("다른 사용자가 이미 예약을 변경했습니다. 다시 시도해주세요.");
+        // 결제가 완료된 상태라면 수정 불가
+        if (reservation.getStatus() != ReservationStatus.PENDING_PAYMENT) {
+            throw new IllegalStateException("결제가 완료된 예약은 변경할 수 없습니다.");
         }
+
+        validateReservationTime(request.getStartTime(), request.getEndTime());
+        checkTimeAvailability(reservation.getMeetingRoomId(), request.getStartTime(), request.getEndTime(), id);
+
+        double newTotalAmount = calculateTotalAmount(
+                reservation.getMeetingRoomId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+
+        // userId로 User 갱신 (필요 시)
+        UserEntity userEntity = UserEntity.fromDomainModel(userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다.")));
+        User user = userEntity.toDomainModel();
+
+        reservation.update(
+                request.getStartTime(),
+                request.getEndTime(),
+                user,
+                newTotalAmount
+        );
+
+        return ReservationResponse.fromDomain(reservationRepository.save(reservation));
     }
 
     /**
-     * 예약 취소 (낙관적 락)
+     * 예약 취소 (낙관적 락 + 재시도)
      */
+    @Retryable(
+            value = OptimisticLockException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 100)
+    )
     @Transactional
     public ReservationResponse updateReservationStatusToCancelled(Long id) {
         Reservation reservation = reservationRepository.findByIdForUpdate(id)
