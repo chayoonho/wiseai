@@ -21,15 +21,14 @@ public class MeetingRoomService {
      */
     @Transactional
     public MeetingRoomResponse createMeetingRoom(MeetingRoomRequest meetingRoomRequest) {
-        MeetingRoom meetingRoom = new MeetingRoom(
-                null,
+        MeetingRoom meetingRoom = MeetingRoom.create(
                 meetingRoomRequest.getName(),
                 meetingRoomRequest.getCapacity(),
                 meetingRoomRequest.getHourlyRate()
         );
 
         MeetingRoom savedMeetingRoom = meetingRoomRepository.save(meetingRoom);
-        return MeetingRoomResponse.fromEntity(savedMeetingRoom);
+        return MeetingRoomResponse.fromDomain(savedMeetingRoom);
     }
 
     /**
@@ -39,7 +38,7 @@ public class MeetingRoomService {
     public MeetingRoomResponse findMeetingRoomById(Long id) {
         MeetingRoom meetingRoom = meetingRoomRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("회의실을 찾을 수 없습니다."));
-        return MeetingRoomResponse.fromEntity(meetingRoom);
+        return MeetingRoomResponse.fromDomain(meetingRoom);
     }
 
     /**
@@ -48,7 +47,7 @@ public class MeetingRoomService {
     @Transactional(readOnly = true)
     public List<MeetingRoomResponse> findAllMeetingRooms() {
         return meetingRoomRepository.findAll().stream()
-                .map(MeetingRoomResponse::fromEntity)
+                .map(MeetingRoomResponse::fromDomain)
                 .toList();
     }
 }
